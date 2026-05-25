@@ -237,4 +237,4 @@ This supports the flow:
 
 ---
 
-This README should give any developer (including future you) a clear picture of what the app does, how it’s structured, and where it’s headed (Core + API + React). As we implement the API and React UI, we can update this document with concrete endpoint definitions and screenshots of the UI.
+This README should give any developer a clear picture of what the app does, how it’s structured, and where it’s headed (Core + API + React). As we implement the API and React UI, we can update this document with concrete endpoint definitions and screenshots of the UI.
