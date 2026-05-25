@@ -1,0 +1,6 @@
+@RecruiterOutreach.Api_HostAddress = http://localhost:5183
+
+GET {{RecruiterOutreach.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

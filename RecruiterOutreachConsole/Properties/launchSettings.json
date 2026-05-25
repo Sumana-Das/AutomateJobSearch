@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "RecruiterOutreachConsole": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "GMAIL_APP_PASSWORD": "kvdlpyrwmbjlrzlt",
+        "GEMINI_API_KEY": "AIzaSyC5JGaSkslrcfJ0DplZdLLrodM5t7HQ6a8"
+      }
+    }
+  }
+}
