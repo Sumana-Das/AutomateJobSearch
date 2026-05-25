@@ -1,0 +1,14 @@
+{
+  "Key": "software-engineer",
+  "DisplayName": "Software Engineer",
+  "Templates": {
+    "Hr": {
+      "SubjectTemplate": "",
+      "BodyTemplate": ""
+    },
+    "Referral": {
+      "SubjectTemplate": "",
+      "BodyTemplate": ""
+    }
+  }
+}

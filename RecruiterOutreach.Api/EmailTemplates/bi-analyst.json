@@ -1,0 +1,14 @@
+{
+  "Key": "bi-analyst",
+  "DisplayName": "BI Analyst",
+  "Templates": {
+    "Hr": {
+      "SubjectTemplate": "Aplication for {Role}",
+      "BodyTemplate": "Hi,\n\nI am writing to express my interest in the {Role} position.\n\nRegards,\n<Your Name>"
+    },
+    "Referral": {
+      "SubjectTemplate": "",
+      "BodyTemplate": ""
+    }
+  }
+}

@@ -31,6 +31,11 @@ public sealed class OutreachService
         string company,
         string role,
         string? jobDescription,
+        string? roleKey = null,
+        string? templateKind = null,
+        IReadOnlyCollection<string>? recruiterEmails = null,
+        string? subjectOverride = null,
+        string? emailBodyOverride = null,
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Starting outreach run for Company={Company}, Role={Role}", company, role);
@@ -95,9 +100,17 @@ public sealed class OutreachService
             return;
         }
 
-        if (_settings.Recruiters.Count == 0)
+        var recipients = recruiterEmails is null
+            ? Array.Empty<string>()
+            : recruiterEmails
+                .Where(e => !string.IsNullOrWhiteSpace(e))
+                .Select(e => e.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+        if (recipients.Length == 0)
         {
-            _logger.LogWarning("No recruiters configured. Aborting outreach run.");
+            _logger.LogWarning("No recruiter email addresses provided. Aborting outreach run.");
             return;
         }
 
@@ -107,15 +120,26 @@ public sealed class OutreachService
             _logger.LogWarning("Configured default resume attachment does not exist at {Path}", resumePath);
         }
 
-        foreach (var recruiterEmail in _settings.Recruiters)
+        // Resolve the template variant to use (e.g., HR vs Referral for the given role)
+        var template = ResolveTemplate(roleKey, templateKind);
+
+        foreach (var recruiterEmail in recipients)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var subject = _settings.EmailTemplate.SubjectTemplate
+            var subjectTemplate = !string.IsNullOrWhiteSpace(subjectOverride)
+                ? subjectOverride
+                : template.SubjectTemplate;
+
+            var bodyTemplate = !string.IsNullOrWhiteSpace(emailBodyOverride)
+                ? emailBodyOverride
+                : template.BodyTemplate;
+
+            var subject = subjectTemplate
                 .Replace("{Company}", company, StringComparison.OrdinalIgnoreCase)
                 .Replace("{Role}", role, StringComparison.OrdinalIgnoreCase);
 
-            var body = _settings.EmailTemplate.BodyTemplate
+            var body = bodyTemplate
                 .Replace("{Company}", company, StringComparison.OrdinalIgnoreCase)
                 .Replace("{Role}", role, StringComparison.OrdinalIgnoreCase);
 
@@ -137,6 +161,55 @@ public sealed class OutreachService
         }
 
         _logger.LogInformation("Outreach run completed.");
+    }
+
+    private RoleTemplateVariant ResolveTemplate(string? roleKey, string? templateKind)
+    {
+        // Normalise kind (default to HR if not specified)
+        var kind = string.IsNullOrWhiteSpace(templateKind) ? "Hr" : templateKind;
+
+        // Helper local function to extract variant from a role template
+        static RoleTemplateVariant? GetVariant(RoleEmailTemplateSettings roleTemplate, string kindValue)
+        {
+            return kindValue.Equals("Referral", StringComparison.OrdinalIgnoreCase)
+                ? roleTemplate.Templates.Referral
+                : roleTemplate.Templates.Hr;
+        }
+
+        // 1) Try explicit roleKey + kind
+        if (!string.IsNullOrWhiteSpace(roleKey) && _settings.RoleEmailTemplates.Count > 0)
+        {
+            var match = _settings.RoleEmailTemplates.Find(t => string.Equals(t.Key, roleKey, StringComparison.OrdinalIgnoreCase));
+            var variant = match is not null ? GetVariant(match, kind) : null;
+            if (variant is not null)
+            {
+                return variant;
+            }
+        }
+
+        // 2) Try default role + kind
+        if (!string.IsNullOrWhiteSpace(_settings.DefaultRoleKey) && _settings.RoleEmailTemplates.Count > 0)
+        {
+            var defaultMatch = _settings.RoleEmailTemplates.Find(t => string.Equals(t.Key, _settings.DefaultRoleKey, StringComparison.OrdinalIgnoreCase));
+            var variant = defaultMatch is not null ? GetVariant(defaultMatch, kind) : null;
+            if (variant is not null)
+            {
+                return variant;
+            }
+        }
+
+        // 3) Fallback: first available role + HR (or Referral) variant
+        foreach (var t in _settings.RoleEmailTemplates)
+        {
+            var variant = GetVariant(t, kind) ?? GetVariant(t, "Hr") ?? GetVariant(t, "Referral");
+            if (variant is not null)
+            {
+                return variant;
+            }
+        }
+
+        // 4) Absolute fallback: empty template to avoid nulls
+        return new RoleTemplateVariant();
     }
 
     private static string MakeSafeFileNamePart(string input)

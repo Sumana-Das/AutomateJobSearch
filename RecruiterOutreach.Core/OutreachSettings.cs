@@ -5,13 +5,28 @@ namespace RecruiterOutreach.Core;
 public sealed class OutreachSettings
 {
     public List<string> Recruiters { get; set; } = new();
-    public EmailTemplateSettings EmailTemplate { get; set; } = new();
+    public List<RoleEmailTemplateSettings> RoleEmailTemplates { get; set; } = new();
+    public string? DefaultRoleKey { get; set; }
+    public string? DefaultTemplateKind { get; set; }
     public ResumeSettings Resume { get; set; } = new();
     public SmtpSettings SmtpSettings { get; set; } = new();
     public GeminiSettings Gemini { get; set; } = new();
 }
 
-public sealed class EmailTemplateSettings
+public sealed class RoleEmailTemplateSettings
+{
+    public string Key { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public RoleTemplateVariants Templates { get; set; } = new();
+}
+
+public sealed class RoleTemplateVariants
+{
+    public RoleTemplateVariant? Hr { get; set; }
+    public RoleTemplateVariant? Referral { get; set; }
+}
+
+public sealed class RoleTemplateVariant
 {
     public string SubjectTemplate { get; set; } = string.Empty;
     public string BodyTemplate { get; set; } = string.Empty;
