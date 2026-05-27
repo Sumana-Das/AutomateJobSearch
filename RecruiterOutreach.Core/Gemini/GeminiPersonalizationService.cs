@@ -1,29 +1,56 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Google.GenAI;
 
 namespace RecruiterOutreach.Core.Gemini;
 
-/// <summary>
-/// Placeholder implementation that simulates Gemini personalization.
-/// It is structured so you can later plug in real HTTP calls to the Gemini API using HttpClient.
-/// </summary>
 public sealed class GeminiPersonalizationService : IGeminiPersonalizationService
 {
     private readonly GeminiSettings _settings;
     private readonly ILogger<GeminiPersonalizationService> _logger;
+    private readonly Client _client;
+    private readonly int _rpmLimit;
+    private readonly int _rpdLimit;
+    private readonly object _rateLock = new();
+    private readonly Queue<DateTime> _minuteWindow = new();
+    private readonly Queue<DateTime> _dayWindow = new();
 
-    public GeminiPersonalizationService(GeminiSettings settings, ILogger<GeminiPersonalizationService> logger)
+    public GeminiPersonalizationService(GeminiSettings settings, ILogger<GeminiPersonalizationService> logger, Client client)
     {
         _settings = settings;
         _logger = logger;
+        _client = client;
+
+        var model = _settings.Model?.ToLowerInvariant() ?? string.Empty;
+
+        // Base defaults from free-tier guidance
+        int defaultRpm;
+        int defaultRpd;
+        if (model.Contains("flash"))
+        {
+            defaultRpm = 12;   // between 10-15 RPM
+            defaultRpd = 1000; // documented daily cap
+        }
+        else if (model.Contains("pro"))
+        {
+            defaultRpm = 5;    // 5 RPM for Pro
+            defaultRpd = 100;  // conservative daily cap
+        }
+        else
+        {
+            defaultRpm = 10;
+            defaultRpd = 1000;
+        }
+
+        _rpmLimit = _settings.MaxRequestsPerMinute ?? defaultRpm;
+        _rpdLimit = _settings.MaxRequestsPerDay ?? defaultRpd;
     }
 
     public async Task<GeminiPersonalizationResult> PersonalizeAsync(
@@ -33,11 +60,10 @@ public sealed class GeminiPersonalizationService : IGeminiPersonalizationService
     {
         _logger.LogInformation("[Gemini] Starting personalization against JD of length {Length} characters.", jobDescription.Length);
 
-        if (string.IsNullOrWhiteSpace(_settings.Endpoint) ||
-            string.IsNullOrWhiteSpace(_settings.Model) ||
+        if (string.IsNullOrWhiteSpace(_settings.Model) ||
             string.IsNullOrWhiteSpace(_settings.ApiKey))
         {
-            throw new InvalidOperationException("Gemini settings are not configured. Please set Endpoint, Model, and ApiKey.");
+            throw new InvalidOperationException("Gemini settings are not configured. Please set Model and ApiKey.");
         }
 
         string suggestionsText;
@@ -47,11 +73,7 @@ public sealed class GeminiPersonalizationService : IGeminiPersonalizationService
         List<string> keywordsToAddFromGemini;
         string geminiMatchScore = "Unknown";
 
-        using (var client = new HttpClient())
         {
-            var endpoint = _settings.Endpoint.TrimEnd('/');
-            var url = $"{endpoint}/v1beta/models/{_settings.Model}:generateContent?key={_settings.ApiKey}";
-
             var promptBuilder = new StringBuilder();
             promptBuilder.AppendLine("You are an expert resume reviewer and ATS keyword extractor.");
             promptBuilder.AppendLine();
@@ -97,45 +119,15 @@ public sealed class GeminiPersonalizationService : IGeminiPersonalizationService
 
             var prompt = promptBuilder.ToString();
 
-            var payload = new
-            {
-                contents = new[]
-                {
-                    new
-                    {
-                        parts = new[]
-                        {
-                            new { text = prompt }
-                        }
-                    }
-                }
-            };
-
-            var json = JsonSerializer.Serialize(payload);
-            using var request = new HttpRequestMessage(HttpMethod.Post, url)
-            {
-                Content = new StringContent(json, Encoding.UTF8, "application/json")
-            };
-
-            var response = await client.SendAsync(request, cancellationToken);
-            var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogError("[Gemini] API call failed with status code {StatusCode}. Body: {Body}", response.StatusCode, responseJson);
-                throw new InvalidOperationException($"Gemini API call failed with status code {response.StatusCode}.");
-            }
-
             try
             {
-                using var doc = JsonDocument.Parse(responseJson);
-                var root = doc.RootElement;
-                var text = root
-                    .GetProperty("candidates")[0]
-                    .GetProperty("content")
-                    .GetProperty("parts")[0]
-                    .GetProperty("text")
-                    .GetString();
+                await ThrottleAsync(cancellationToken);
+
+                var response = await _client.Models.GenerateContentAsync(
+                    model: _settings.Model,
+                    contents: prompt);
+
+                var text = response.Text;
 
                 if (string.IsNullOrWhiteSpace(text))
                 {
@@ -247,6 +239,69 @@ public sealed class GeminiPersonalizationService : IGeminiPersonalizationService
         };
 
         return result;
+    }
+
+    private async Task ThrottleAsync(CancellationToken cancellationToken)
+    {
+        if (_rpmLimit <= 0 && _rpdLimit <= 0)
+        {
+            return;
+        }
+
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var now = DateTime.UtcNow;
+            TimeSpan? delay = null;
+
+            lock (_rateLock)
+            {
+                // Clean old entries from the 1-minute window
+                while (_minuteWindow.Count > 0 && (now - _minuteWindow.Peek()).TotalSeconds >= 60)
+                {
+                    _minuteWindow.Dequeue();
+                }
+
+                // Clean old entries from the 1-day window
+                while (_dayWindow.Count > 0 && (now - _dayWindow.Peek()).TotalDays >= 1)
+                {
+                    _dayWindow.Dequeue();
+                }
+
+                if (_rpdLimit > 0 && _dayWindow.Count >= _rpdLimit)
+                {
+                    throw new InvalidOperationException("Gemini daily rate limit reached for this application. Please try again tomorrow or upgrade your plan.");
+                }
+
+                if (_rpmLimit > 0 && _minuteWindow.Count >= _rpmLimit)
+                {
+                    var oldest = _minuteWindow.Peek();
+                    var waitUntil = oldest.AddMinutes(1);
+                    var toWait = waitUntil - now;
+                    if (toWait < TimeSpan.Zero)
+                    {
+                        toWait = TimeSpan.Zero;
+                    }
+
+                    delay = toWait;
+                }
+                else
+                {
+                    _minuteWindow.Enqueue(now);
+                    _dayWindow.Enqueue(now);
+                    return;
+                }
+            }
+
+            if (delay.HasValue && delay.Value > TimeSpan.Zero)
+            {
+                await Task.Delay(delay.Value, cancellationToken);
+            }
+            else
+            {
+                // Loop again to re-check windows
+            }
+        }
     }
 
     private static IEnumerable<string> ExtractKeywords(string text)

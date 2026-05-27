@@ -9,6 +9,7 @@ export type SuggestionsData = {
   ourScoring: ScoringView;
   geminiScoring: ScoringView;
   jdExcerpt: string;
+  debugResumePreview: string;
 };
 
 export async function fetchSuggestions(input: {

@@ -61,16 +61,31 @@ Everything lives in one repository so you can track the complete application (AP
   - Configuration via `appsettings.json` bound to `OutreachSettings`.
   - Logging via `Microsoft.Extensions.Logging`.
   - SMTP email sending using `System.Net.Mail` through `SmtpEmailSender`.
+  - PDF-to-text extraction for resumes using **UglyToad.PdfPig**.
 
 - **Frontend**
   - React (Create React App).
   - TypeScript.
   - Local dev server proxied to the API via the `proxy` setting in `package.json`.
+  - `react-markdown` to render Gemini's markdown-formatted explanations in the Suggestions tab.
 
-- **AI / personalization**
+- **AI / personalization (current)**
   - `IGeminiPersonalizationService` and `GeminiPersonalizationService` encapsulate AI‑driven resume suggestions.
-  - Intended to integrate with **Google Gemini API** using an API key supplied via environment variable (e.g. `GEMINI_API_KEY`).
-  - Currently the API surface is ready; you can plug in real HTTP calls when you are ready.
+  - Integrated with **Google Gemini** via the official **Google.GenAI** .NET SDK (no manual `HttpClient` calls).
+  - Model configured via `OutreachSettings.Gemini.Model` (for example `gemini-3.5-flash`).
+  - API key provided via `OutreachSettings.Gemini.ApiKey` or the `GEMINI_API_KEY` environment variable.
+  - In-memory rate limiting inside `GeminiPersonalizationService` (requests per minute / per day) with defaults based on the model class and optional overrides via `OutreachSettings.Gemini.MaxRequestsPerMinute` / `MaxRequestsPerDay`.
+  - Gemini returns a **mixed response**:
+    - A detailed, markdown-formatted narrative explaining how to tailor the resume.
+    - A small JSON block (after a `JSON_KEYWORDS_START` marker) containing match score and structured keyword lists.
+  - The backend derives an additional "our" heuristic score from Gemini's JD vs resume keyword overlap so you can compare or tune match scoring independently of the model.
+
+- **Key packages / SDKs**
+  - Backend NuGet:
+    - `Google.GenAI` – Gemini SDK.
+    - `UglyToad.PdfPig` – resume PDF text extraction.
+  - Frontend npm:
+    - `react-markdown` – render Gemini narrative with headings, bullets, and emphasis.
 
 ---
 
@@ -84,13 +99,16 @@ Everything lives in one repository so you can track the complete application (AP
   - SMTP account (e.g. Gmail) and an **app password**.
   - Configuration in `appsettings.json` (or user secrets / environment variables):
     - `OutreachSettings.Recruiters` – list of recruiter email addresses.
-    - `OutreachSettings.EmailTemplate.SubjectTemplate` / `BodyTemplate` – can contain `{Company}` and `{Role}` placeholders.
-    - `OutreachSettings.Resume.DefaultAttachmentPath` – absolute path to your resume file **outside the repo**.
+    - `OutreachSettings.RoleEmailTemplates` – JSON-based templates with `Key`, `DisplayName` and `Templates` (Hr/Referral variants) used by the outreach flow.
+    - `OutreachSettings.Resume.DefaultAttachmentPath` – absolute path to your default resume file **outside the repo**.
     - `OutreachSettings.SmtpSettings` – `Host`, `Port`, `UseSsl`, `UserName`, `FromAddress`.
-    - `OutreachSettings.Gemini` – `Endpoint`, `Model`, `ApiKey` (placeholder if not yet integrated).
+    - `OutreachSettings.Gemini`:
+      - `Model` – Gemini model name (e.g. `gemini-3.5-flash`).
+      - `ApiKey` – optional, API key if not supplied via environment variable.
+      - `MaxRequestsPerMinute` / `MaxRequestsPerDay` – optional overrides for the in-memory rate limiter.
   - Environment variables:
     - `GMAIL_APP_PASSWORD` – SMTP app password for the configured account.
-    - Optionally `GEMINI_API_KEY` – for AI integration.
+    - Optionally `GEMINI_API_KEY` – for AI integration; used if `OutreachSettings.Gemini.ApiKey` is empty.
 
 - **Frontend (recruiter-outreach-ui)**
   - Node.js (LTS) + npm.
@@ -151,16 +169,23 @@ From Swagger you can test endpoints directly by supplying the request payloads.
 
 ## 6. Future
 
-- **Stronger Gemini integration**
-  - Replace placeholder logic with real calls to Gemini.
-  - Provide richer suggestions (rewritten bullets, tailored email bodies, etc.).
+- **Authentication, accounts and OAuth2 login**
+  - Add a secure login / account system so multiple users can safely use the tool.
+  - Support OAuth2/OIDC sign-in with providers such as Google, GitHub or Microsoft.
+  - Persist user-specific configuration (recruiter lists, templates, default resume path) per account instead of global config.
+
+- **Generic AI abstraction and multi-LLM support**
+  - Introduce a generic `IAiPersonalizationService` interface decoupled from Gemini-specific details.
+  - Keep `GeminiPersonalizationService` as one implementation and add adapters for other LLM providers (OpenAI, Azure OpenAI, Claude, etc.).
+  - Normalize prompt/response shapes (narrative + structured JSON) so the UI and scoring layer do not depend on a single model.
+  - Centralize rate limiting and provider-specific configuration so you can switch or combine models via configuration only.
 
 - **More template types and personalization**
   - Multiple named templates (HR, referral, networking, follow‑up).
   - Additional placeholders beyond `{Company}` and `{Role}`.
 
 - **Profile and configuration UI**
-  - Manage recruiter lists and templates directly from the UI instead of editing JSON.
+  - Manage recruiter lists, templates and AI provider settings directly from the UI instead of editing JSON.
 
 - **Deployment pipelines**
   - CI/CD for API and UI (e.g. Azure, Vercel/Netlify).

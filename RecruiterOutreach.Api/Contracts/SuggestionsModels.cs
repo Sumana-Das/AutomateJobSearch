@@ -11,7 +11,8 @@ public record SuggestionsResponse(
     string SuggestionsText,
     ScoringView OurScoring,
     ScoringView GeminiScoring,
-    string JdExcerpt);
+    string JdExcerpt,
+    string DebugResumePreview);
 
 public record SetupRequest(string? GmailAppPassword, string? GeminiApiKey);
 

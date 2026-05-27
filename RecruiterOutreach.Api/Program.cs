@@ -8,6 +8,7 @@ using RecruiterOutreach.Api.Contracts;
 using RecruiterOutreach.Core;
 using RecruiterOutreach.Core.Emailing;
 using RecruiterOutreach.Core.Gemini;
+using Google.GenAI;
 using RecruiterOutreach.Core.Outreach;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -47,6 +48,20 @@ builder.Services.AddSingleton(outreachSettings.Gemini);
 
 builder.Services.AddLogging();
 builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
+
+builder.Services.AddSingleton(sp =>
+{
+    var geminiSettings = sp.GetRequiredService<GeminiSettings>();
+    // Prefer explicit key from settings, fall back to environment variable used by Google.GenAI
+    var apiKey = !string.IsNullOrWhiteSpace(geminiSettings.ApiKey)
+        ? geminiSettings.ApiKey
+        : Environment.GetEnvironmentVariable("GEMINI_API_KEY");
+
+    return string.IsNullOrWhiteSpace(apiKey)
+        ? new Client()
+        : new Client(apiKey: apiKey);
+});
+
 builder.Services.AddSingleton<IGeminiPersonalizationService, GeminiPersonalizationService>();
 builder.Services.AddSingleton<OutreachService>();
 
@@ -207,6 +222,10 @@ app.MapPost("/api/outreach/suggestions", async (
         ? jobDescription.Substring(0, 1000) + "..."
         : jobDescription;
 
+    // For debugging multi-page resume parsing, expose the full parsed text back to the UI.
+    // This is not used for any scoring, only for inspection in the browser console.
+    var resumePreview = resumeText ?? string.Empty;
+
     var ourScoring = new ScoringView(
         personalization.OurKeywordsToAdd,
         personalization.OurMissingKeywords,
@@ -221,7 +240,8 @@ app.MapPost("/api/outreach/suggestions", async (
         personalization.UpdatedResumeText,
         ourScoring,
         geminiScoring,
-        jdExcerpt);
+        jdExcerpt,
+        resumePreview);
 
     return Results.Ok(response);
 })

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { fetchSuggestions, SuggestionsData } from '../services/aiSuggestionsApi';
 
 export const AISuggestions: React.FC = () => {
@@ -28,9 +29,7 @@ export const AISuggestions: React.FC = () => {
     }
   };
 
-  const cleanedNarrative = suggestions?.suggestionsText
-    ? suggestions.suggestionsText.replace(/\*\*/g, '')
-    : '';
+  const narrative = suggestions?.suggestionsText ?? '';
 
   let scoreValue = 0;
   if (suggestions?.ourScoring.matchScore === 'High') {
@@ -131,7 +130,9 @@ export const AISuggestions: React.FC = () => {
           })()}
 
           <h3 className="section-title" style={{ marginTop: 14 }}>Detailed explanation &amp; summary</h3>
-          <div className="suggestions-narrative">{cleanedNarrative}</div>
+          <div className="suggestions-narrative">
+            <ReactMarkdown>{narrative}</ReactMarkdown>
+          </div>
         </section>
       )}
     </>

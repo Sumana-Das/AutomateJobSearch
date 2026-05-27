@@ -50,7 +50,8 @@ public sealed class SmtpSettings
 
 public sealed class GeminiSettings
 {
-    public string Endpoint { get; set; } = string.Empty;
     public string Model { get; set; } = string.Empty;
     public string ApiKey { get; set; } = string.Empty;
+    public int? MaxRequestsPerMinute { get; set; }
+    public int? MaxRequestsPerDay { get; set; }
 }
