@@ -11,6 +11,8 @@ public sealed class OutreachSettings
     public ResumeSettings Resume { get; set; } = new();
     public SmtpSettings SmtpSettings { get; set; } = new();
     public GeminiSettings Gemini { get; set; } = new();
+    // Keywords in recruiter email local-parts that should be treated as generic inboxes
+    public List<string> GenericRecruiterKeywords { get; set; } = new();
 }
 
 public sealed class RoleEmailTemplateSettings

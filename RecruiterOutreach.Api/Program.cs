@@ -1,7 +1,9 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Antiforgery;
+using UglyToad.PdfPig;
 using RecruiterOutreach.Api.Contracts;
 using RecruiterOutreach.Core;
 using RecruiterOutreach.Core.Emailing;
@@ -161,27 +163,72 @@ app.MapGet("/api/templates/preview", ([FromQuery] string roleKey, [FromQuery] st
 })
 .WithName("GetTemplatePreview");
 
-// Suggestions endpoint (JD-based, no send)
+// Suggestions endpoint (JD-based, with optional resume upload/persistence)
 app.MapPost("/api/outreach/suggestions", async (
-    [FromBody] SuggestionsRequest request,
-    IGeminiPersonalizationService gemini) =>
+    [FromForm] string jobDescription,
+    [FromForm] bool persistResume,
+    IFormFile? resume,
+    OutreachSettings settings,
+    IGeminiPersonalizationService gemini,
+    CancellationToken cancellationToken) =>
 {
-    var personalization = await gemini.PersonalizeAsync(string.Empty, request.JobDescription);
+    // Determine the effective resume text: uploaded file (optionally persisted) or existing default file.
+    string resumeText = string.Empty;
 
-    var jdExcerpt = request.JobDescription.Length > 1000
-        ? request.JobDescription.Substring(0, 1000) + "..."
-        : request.JobDescription;
+    // 1) If a resume file was uploaded with this request, read it and optionally persist it.
+    if (resume is not null && resume.Length > 0)
+    {
+        resumeText = await ExtractResumeTextFromUploadAsync(resume, cancellationToken);
+
+        if (persistResume)
+        {
+            var targetPath = settings.Resume?.DefaultAttachmentPath;
+            if (!string.IsNullOrWhiteSpace(targetPath))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
+                using var fileStream = File.Create(targetPath);
+                await resume.CopyToAsync(fileStream, cancellationToken);
+            }
+        }
+    }
+    else
+    {
+        // 2) No upload in this request. Fall back to existing configured resume file if present.
+        var defaultPath = settings.Resume?.DefaultAttachmentPath;
+        if (!string.IsNullOrWhiteSpace(defaultPath) && File.Exists(defaultPath))
+        {
+            resumeText = await ExtractResumeTextFromFileAsync(defaultPath, cancellationToken);
+        }
+    }
+
+    var personalization = await gemini.PersonalizeAsync(resumeText, jobDescription, cancellationToken);
+
+    var jdExcerpt = jobDescription.Length > 1000
+        ? jobDescription.Substring(0, 1000) + "..."
+        : jobDescription;
+
+    var ourScoring = new ScoringView(
+        personalization.OurKeywordsToAdd,
+        personalization.OurMissingKeywords,
+        personalization.OurMatchScore);
+
+    var geminiScoring = new ScoringView(
+        personalization.GeminiKeywordsToAdd,
+        personalization.GeminiMissingKeywords,
+        personalization.GeminiMatchScore);
 
     var response = new SuggestionsResponse(
         personalization.UpdatedResumeText,
-        personalization.KeywordsToAdd,
+        ourScoring,
+        geminiScoring,
         jdExcerpt);
 
     return Results.Ok(response);
 })
+.DisableAntiforgery()
 .WithName("GetSuggestions");
 
-// Basic send endpoint (no JD-based personalization; uses default attachment)
+// Basic send endpoint (no JD-based personalization; uses default attachment unless an override is uploaded)
 app.MapPost("/api/outreach/send", async (
     [FromForm] string recruiters,
     [FromForm] string? roleKey,
@@ -189,15 +236,53 @@ app.MapPost("/api/outreach/send", async (
     [FromForm] string? company,
     [FromForm] string? subject,
     [FromForm] string? emailBody,
+    [FromForm] bool persistResume,
+    IFormFile? resume,
     OutreachService outreach,
     OutreachSettings settings) =>
 {
-    var recruiterEmails = (recruiters ?? string.Empty)
-        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    // Allow recruiter emails to be separated by commas, semicolons, spaces, or newlines
+    var recruiterEmails = Regex.Split(recruiters ?? string.Empty, "[\\s,;]+")
         .Where(x => !string.IsNullOrWhiteSpace(x))
         .ToArray();
 
     company ??= string.Empty;
+
+    // If a resume is uploaded, either persist it as the new default (when requested) or
+    // write it to a temporary file that will be used only for this send.
+    string? resumeAttachmentPath = null;
+    if (resume is not null && resume.Length > 0)
+    {
+        if (persistResume && settings.Resume is not null && !string.IsNullOrWhiteSpace(settings.Resume.DefaultAttachmentPath))
+        {
+            var targetPath = settings.Resume.DefaultAttachmentPath;
+            Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
+            using (var fileStream = File.Create(targetPath))
+            {
+                await resume.CopyToAsync(fileStream);
+            }
+
+            resumeAttachmentPath = targetPath;
+        }
+        else
+        {
+            var baseFolder = !string.IsNullOrWhiteSpace(settings.Resume?.DefaultAttachmentPath)
+                ? Path.GetDirectoryName(settings.Resume.DefaultAttachmentPath) ?? Directory.GetCurrentDirectory()
+                : Path.GetDirectoryName(Environment.ProcessPath!) ?? Directory.GetCurrentDirectory();
+
+            Directory.CreateDirectory(baseFolder);
+
+            var tempFileName = $"UploadedResume_{DateTime.Now:yyyyMMddHHmmssfff}_{Guid.NewGuid():N}{Path.GetExtension(resume.FileName)}";
+            var tempPath = Path.Combine(baseFolder, tempFileName);
+
+            using (var fileStream = File.Create(tempPath))
+            {
+                await resume.CopyToAsync(fileStream);
+            }
+
+            resumeAttachmentPath = tempPath;
+        }
+    }
 
     // Resolve a human-friendly role name for token replacement (e.g., "Data Analyst")
     var roleDisplayName = string.Empty;
@@ -220,7 +305,8 @@ app.MapPost("/api/outreach/send", async (
         templateKind: templateKind,
         recruiterEmails: recruiterEmails,
         subjectOverride: subject,
-        emailBodyOverride: emailBody);
+        emailBodyOverride: emailBody,
+        resumeAttachmentPath: resumeAttachmentPath);
 
     return Results.Ok();
 })
@@ -228,3 +314,43 @@ app.MapPost("/api/outreach/send", async (
 .WithName("SendEmails");
 
 app.Run();
+
+static async Task<string> ExtractResumeTextFromFileAsync(string path, CancellationToken cancellationToken)
+{
+    var extension = Path.GetExtension(path).ToLowerInvariant();
+
+    if (extension == ".pdf")
+    {
+        await using var stream = File.OpenRead(path);
+        return ExtractTextFromPdf(stream);
+    }
+
+    return await File.ReadAllTextAsync(path, cancellationToken);
+}
+
+static async Task<string> ExtractResumeTextFromUploadAsync(IFormFile file, CancellationToken cancellationToken)
+{
+    var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+
+    if (extension == ".pdf")
+    {
+        await using var stream = file.OpenReadStream();
+        return ExtractTextFromPdf(stream);
+    }
+
+    using var reader = new StreamReader(file.OpenReadStream());
+    return await reader.ReadToEndAsync();
+}
+
+static string ExtractTextFromPdf(Stream stream)
+{
+    using var document = PdfDocument.Open(stream);
+    var builder = new System.Text.StringBuilder();
+
+    foreach (var page in document.GetPages())
+    {
+        builder.AppendLine(page.Text);
+    }
+
+    return builder.ToString();
+}

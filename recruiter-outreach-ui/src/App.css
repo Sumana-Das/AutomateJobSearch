@@ -21,7 +21,7 @@
 
 .form-section,
 .suggestions-section {
-  max-width: 980px;
+  max-width: 840px;
   width: 100%;
   margin: 0 auto 24px;
   background: rgba(15, 23, 42, 0.9);
@@ -184,6 +184,54 @@
   color: #cbd5f5;
 }
 
+.match-score-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(31, 41, 55, 0.9);
+  border: 1px solid rgba(55, 65, 81, 0.9);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.match-score-fill {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.25s ease, background 0.25s ease;
+}
+
+.suggestions-text-box {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(55, 65, 81, 0.9);
+  text-align: left;
+}
+
+.suggestions-narrative {
+  white-space: pre-wrap;
+  font-size: 0.9rem;
+  color: #e5e7eb;
+}
+
+.section-title {
+  margin: 0 0 2px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.section-help {
+  margin: 0 0 6px;
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.suggestions-text-box .section-help {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
 /* Layout grids for setup, email, and suggestions */
 
 .setup-grid {
@@ -202,16 +250,78 @@
 .email-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 16px;
+  column-gap: 20px;
+  row-gap: 14px;
 }
 
 .email-grid .full-width {
   grid-column: 1 / -1;
 }
 
+/* Make email tab controls more compact instead of spanning full card width */
+/* Let controls fill their grid column but keep the overall card narrower */
+.email-grid .field input,
+.email-grid .field select,
+.email-grid .field textarea {
+  max-width: 100%;
+}
+
+.email-grid .actions.full-width {
+  justify-content: center;
+}
+
+.email-grid .actions.full-width button {
+  flex: 0 0 auto;
+}
+
+.checkbox-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.checkbox-inline input[type='checkbox'] {
+  width: 12px;
+  height: 12px;
+  margin-top: 1px;
+}
+
+/* Specific placement for a more uniform layout on the email tab */
+.email-grid .field:nth-of-type(1) { /* Role */
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.email-grid .field:nth-of-type(2) { /* Template */
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.email-grid .recruiters-field {
+  grid-column: 1; /* left column only */
+  grid-row: 2;
+}
+
+.email-grid .field.body-field { /* Subject + body block on right */
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.email-grid .recruiters-field > div,
+.email-grid .field.body-field > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.email-grid .recruiters-field textarea,
+.email-grid .field.body-field textarea {
+  min-height: 180px;
+}
+
 .suggestions-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
   align-items: flex-start;
 }
@@ -225,7 +335,9 @@
 }
 
 @media (min-width: 768px) {
-  .form-section {
+  /* Keep generic sections slightly structured, but do not override specialized grids
+     like .email-grid, .setup-grid, or .suggestions-grid. */
+  .form-section:not(.email-grid):not(.setup-grid):not(.suggestions-grid) {
     display: grid;
     grid-template-columns: minmax(0, 1.1fr);
   }

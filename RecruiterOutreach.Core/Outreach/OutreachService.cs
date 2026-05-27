@@ -36,6 +36,7 @@ public sealed class OutreachService
         IReadOnlyCollection<string>? recruiterEmails = null,
         string? subjectOverride = null,
         string? emailBodyOverride = null,
+        string? resumeAttachmentPath = null,
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Starting outreach run for Company={Company}, Role={Role}", company, role);
@@ -68,10 +69,14 @@ public sealed class OutreachService
                 await writer.WriteLineAsync($"Role: {role}");
                 await writer.WriteLineAsync();
 
-                if (personalization.KeywordsToAdd.Count > 0)
+                await writer.WriteLineAsync("Our scoring (heuristic overlap using Gemini JD/resume keywords):");
+                await writer.WriteLineAsync($"Match score: {personalization.OurMatchScore}");
+                await writer.WriteLineAsync();
+
+                if (personalization.OurKeywordsToAdd.Count > 0)
                 {
-                    await writer.WriteLineAsync("Keywords to consider adding to your resume:");
-                    foreach (var kw in personalization.KeywordsToAdd)
+                    await writer.WriteLineAsync("Keywords to consider adding:");
+                    foreach (var kw in personalization.OurKeywordsToAdd)
                     {
                         await writer.WriteLineAsync("- " + kw);
                     }
@@ -79,10 +84,10 @@ public sealed class OutreachService
                     await writer.WriteLineAsync();
                 }
 
-                if (personalization.KeywordsToRemove.Count > 0)
+                if (personalization.OurMissingKeywords.Count > 0)
                 {
-                    await writer.WriteLineAsync("Keywords to consider removing or de-emphasizing:");
-                    foreach (var kw in personalization.KeywordsToRemove)
+                    await writer.WriteLineAsync("Keywords currently missing from your resume:");
+                    foreach (var kw in personalization.OurMissingKeywords)
                     {
                         await writer.WriteLineAsync("- " + kw);
                     }
@@ -90,7 +95,33 @@ public sealed class OutreachService
                     await writer.WriteLineAsync();
                 }
 
-                await writer.WriteLineAsync("Detailed suggestions and JD excerpt:");
+                await writer.WriteLineAsync("Gemini scoring (direct from model):");
+                await writer.WriteLineAsync($"Match score: {personalization.GeminiMatchScore}");
+                await writer.WriteLineAsync();
+
+                if (personalization.GeminiKeywordsToAdd.Count > 0)
+                {
+                    await writer.WriteLineAsync("Keywords to consider adding (Gemini):");
+                    foreach (var kw in personalization.GeminiKeywordsToAdd)
+                    {
+                        await writer.WriteLineAsync("- " + kw);
+                    }
+
+                    await writer.WriteLineAsync();
+                }
+
+                if (personalization.GeminiMissingKeywords.Count > 0)
+                {
+                    await writer.WriteLineAsync("Keywords currently missing (Gemini view):");
+                    foreach (var kw in personalization.GeminiMissingKeywords)
+                    {
+                        await writer.WriteLineAsync("- " + kw);
+                    }
+
+                    await writer.WriteLineAsync();
+                }
+
+                await writer.WriteLineAsync("Detailed suggestions:");
                 await writer.WriteLineAsync();
                 await writer.WriteAsync(personalization.UpdatedResumeText);
             }
@@ -114,7 +145,9 @@ public sealed class OutreachService
             return;
         }
 
-        var resumePath = _settings.Resume.DefaultAttachmentPath;
+        var resumePath = !string.IsNullOrWhiteSpace(resumeAttachmentPath)
+            ? resumeAttachmentPath
+            : _settings.Resume.DefaultAttachmentPath;
         if (!string.IsNullOrWhiteSpace(resumePath) && !File.Exists(resumePath))
         {
             _logger.LogWarning("Configured default resume attachment does not exist at {Path}", resumePath);
@@ -135,13 +168,17 @@ public sealed class OutreachService
                 ? emailBodyOverride
                 : template.BodyTemplate;
 
+            var recruiterName = GetRecruiterNameFromEmail(recruiterEmail, _settings);
+
             var subject = subjectTemplate
                 .Replace("{Company}", company, StringComparison.OrdinalIgnoreCase)
-                .Replace("{Role}", role, StringComparison.OrdinalIgnoreCase);
+                .Replace("{Role}", role, StringComparison.OrdinalIgnoreCase)
+                .Replace("{RecruiterName}", recruiterName, StringComparison.OrdinalIgnoreCase);
 
             var body = bodyTemplate
                 .Replace("{Company}", company, StringComparison.OrdinalIgnoreCase)
-                .Replace("{Role}", role, StringComparison.OrdinalIgnoreCase);
+                .Replace("{Role}", role, StringComparison.OrdinalIgnoreCase)
+                .Replace("{RecruiterName}", recruiterName, StringComparison.OrdinalIgnoreCase);
 
             _logger.LogInformation("Sending outreach email to {Recruiter}", recruiterEmail);
 
@@ -161,6 +198,67 @@ public sealed class OutreachService
         }
 
         _logger.LogInformation("Outreach run completed.");
+    }
+
+    private static string GetRecruiterNameFromEmail(string email, OutreachSettings settings)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return "Recruiter";
+        }
+
+        var atIndex = email.IndexOf('@');
+        var localPart = atIndex > 0 ? email[..atIndex] : email;
+
+        var lower = localPart.ToLowerInvariant();
+
+        // Use only the configured generic recruiter keywords. If none are configured,
+        // we treat all addresses as personal inboxes.
+        var keywords = settings.GenericRecruiterKeywords ?? new List<string>();
+
+        foreach (var keyword in keywords)
+        {
+            if (!string.IsNullOrWhiteSpace(keyword) && lower.Contains(keyword.ToLowerInvariant()))
+            {
+                return "Recruiter";
+            }
+        }
+
+        // Split local part on non-letter characters and take the first token
+        var tokens = new List<string>();
+        var current = new System.Text.StringBuilder();
+        foreach (var ch in localPart)
+        {
+            if (char.IsLetter(ch))
+            {
+                current.Append(ch);
+            }
+            else if (current.Length > 0)
+            {
+                tokens.Add(current.ToString());
+                current.Clear();
+            }
+        }
+
+        if (current.Length > 0)
+        {
+            tokens.Add(current.ToString());
+        }
+
+        var firstToken = tokens.Count > 0 ? tokens[0] : localPart;
+        if (string.IsNullOrWhiteSpace(firstToken))
+        {
+            return "Recruiter";
+        }
+
+        // Capitalize first letter, lower the rest (e.g., "anmolika" -> "Anmolika")
+        var trimmed = firstToken.Trim();
+        if (trimmed.Length == 1)
+        {
+            return trimmed.ToUpperInvariant();
+        }
+
+        return char.ToUpperInvariant(trimmed[0]) + trimmed[1..].ToLowerInvariant();
     }
 
     private RoleTemplateVariant ResolveTemplate(string? roleKey, string? templateKind)
