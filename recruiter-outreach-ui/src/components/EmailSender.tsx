@@ -140,7 +140,7 @@ export const EmailSender: React.FC = () => {
         <p className="section-help">Enter email IDs (allowed - commas, semicolons, spaces, new lines)</p>
         <textarea
           id="recruiters"
-          rows={10}
+          rows={4}
           value={recruiterEmails}
           onChange={(e) => setRecruiterEmails(e.target.value)}
           placeholder="e.g. recruiter1@example.com, recruiter2@example.com"
@@ -182,7 +182,7 @@ export const EmailSender: React.FC = () => {
         <p className="section-help">You can customize the email body before sending.</p>
         <textarea
           id="emailBody"
-          rows={10}
+          rows={4}
           value={emailBody}
           onChange={(e) => setEmailBody(e.target.value)}
           placeholder="Write or paste the email you want to send to recruiters"

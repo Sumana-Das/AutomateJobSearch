@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace RecruiterOutreach.Core.Gemini;
 
 public sealed class GeminiPersonalizationResult

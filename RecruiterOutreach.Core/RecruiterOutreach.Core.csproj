@@ -9,6 +9,11 @@
   <ItemGroup>
     <PackageReference Include="Google.GenAI" Version="1.7.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="11.0.0-preview.4.26230.115" />
+    <PackageReference Include="UglyToad.PdfPig" Version="1.7.0-custom-5" />
+    <PackageReference Include="Google.Apis.Gmail.v1" Version="1.69.0.3742" />
+    <PackageReference Include="Google.Apis.Auth" Version="1.69.0" />
+    <PackageReference Include="Google.Apis" Version="1.69.0" />
+    <PackageReference Include="Google.Apis.Core" Version="1.69.0" />
   </ItemGroup>
 
 </Project>

@@ -13,6 +13,7 @@ public sealed class OutreachSettings
     public GeminiSettings Gemini { get; set; } = new();
     // Keywords in recruiter email local-parts that should be treated as generic inboxes
     public List<string> GenericRecruiterKeywords { get; set; } = new();
+    public ScoringSettings Scoring { get; set; } = new();
 }
 
 public sealed class RoleEmailTemplateSettings
@@ -54,4 +55,11 @@ public sealed class GeminiSettings
     public string ApiKey { get; set; } = string.Empty;
     public int? MaxRequestsPerMinute { get; set; }
     public int? MaxRequestsPerDay { get; set; }
+    public string ResumeSuggestionPromptTemplate { get; set; } = string.Empty;
+}
+
+public sealed class ScoringSettings
+{
+    public double HighThreshold { get; set; } = 0.7;
+    public double MediumThreshold { get; set; } = 0.4;
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { fetchSuggestions, SuggestionsData } from '../services/aiSuggestionsApi';
 
@@ -9,6 +9,9 @@ export const AISuggestions: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [persistResume, setPersistResume] = useState(false);
+  const [modelId, setModelId] = useState<string>('gemini-3.5-flash');
+
+  const resumeInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleGetSuggestions = async () => {
     setError(null);
@@ -20,6 +23,7 @@ export const AISuggestions: React.FC = () => {
         jobDescription,
         resumeFile,
         persistResume,
+        modelId,
       });
       setSuggestions(data);
     } catch (e: any) {
@@ -53,37 +57,61 @@ export const AISuggestions: React.FC = () => {
       <section className="form-section suggestions-grid">
         <div className="field full-width-mobile">
           <h2 className="section-title">Job description</h2>
-          <p className="section-help">Paste the JD you are targeting. The tool will suggest resume tweaks based on this.</p>
-          <textarea
-            id="jd"
-            rows={6}
-            value={jobDescription}
-            onChange={(e) => setJobDescription(e.target.value)}
-            placeholder="Paste the JD here to get resume suggestions"
-          />
-        </div>
-
-        <div className="field suggestions-side">
-          <div className="field">
-            <label htmlFor="suggestionsResumeFile">Resume (optional)</label>
-            <p className="section-help">Upload a resume file to compare against this JD. You can also choose to update the saved default resume.</p>
+          <p className="section-help">Paste the JD you are targeting along with your resume* (optional* in case you have resume already saved in location)</p>
+          <div className="jd-textarea-wrapper">
+            <button
+              type="button"
+              className="jd-input-icon"
+              aria-label={resumeFile ? `Change uploaded resume (${resumeFile.name})` : 'Upload resume to use for suggestions'}
+              onClick={() => resumeInputRef.current?.click()}
+            >
+              +
+            </button>
+            <textarea
+              id="jd"
+              rows={4}
+              value={jobDescription}
+              onChange={(e) => setJobDescription(e.target.value)}
+              placeholder="The Job Description"
+            />
+            <select
+              className="jd-corner-model-select"
+              value={modelId}
+              onChange={(e) => setModelId(e.target.value)}
+            >
+              <option value="gemini-3.1-pro">AI - Advanced</option>
+              <option value="gemini-3.5-flash">AI - Standard</option>
+              <option value="gemini-3.1-flash-lite">AI - Lite</option>
+            </select>
             <input
-              id="suggestionsResumeFile"
+              ref={resumeInputRef}
               type="file"
+              accept=".pdf,.doc,.docx,.txt"
+              style={{ display: 'none' }}
               onChange={(e) => {
                 const file = e.target.files?.[0] ?? null;
                 setResumeFile(file);
               }}
             />
-            <label className="checkbox-inline">
-              <input
-                type="checkbox"
-                checked={persistResume}
-                onChange={(e) => setPersistResume(e.target.checked)}
-              />
-              <span>Update saved resume for future suggestions</span>
-            </label>
           </div>
+          {resumeFile && (
+            <>
+              <p className="section-help" style={{ marginTop: 6 }}>
+                Attached resume: <strong>{resumeFile.name}</strong>
+              </p>
+              <label className="checkbox-inline" style={{ marginTop: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={persistResume}
+                  onChange={(e) => setPersistResume(e.target.checked)}
+                />
+                <span>Save uploaded resume for future suggestions</span>
+              </label>
+            </>
+          )}
+        </div>
+
+        <div className="field suggestions-side">
           <div className="actions">
             <button
               type="button"

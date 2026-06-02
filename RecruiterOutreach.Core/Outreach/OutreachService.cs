@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using RecruiterOutreach.Core.Emailing;
 using RecruiterOutreach.Core.Gemini;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RecruiterOutreach.Core.Outreach;
 
@@ -12,19 +13,19 @@ public sealed class OutreachService
 {
     private readonly OutreachSettings _settings;
     private readonly IEmailSender _emailSender;
-    private readonly IGeminiPersonalizationService _gemini;
+    private readonly IServiceProvider _services;
     private readonly ILogger<OutreachService> _logger;
 
     public OutreachService(
         OutreachSettings settings,
         IEmailSender emailSender,
-        IGeminiPersonalizationService gemini,
-        ILogger<OutreachService> logger)
+        ILogger<OutreachService> logger,
+        IServiceProvider services)
     {
         _settings = settings;
         _emailSender = emailSender;
-        _gemini = gemini;
         _logger = logger;
+        _services = services;
     }
 
     public async Task RunAsync(
@@ -45,9 +46,16 @@ public sealed class OutreachService
         {
             _logger.LogInformation("JD provided. Running in DRAFT mode (no emails will be sent).");
 
-            var personalization = await _gemini.PersonalizeAsync(
+            var gemini = _services.GetService<IGeminiPersonalizationService>();
+            if (gemini is null)
+            {
+                throw new InvalidOperationException("Gemini service is not configured.");
+            }
+
+            var personalization = await gemini.ResumeSuggestionAsync(
                 string.Empty,
                 jobDescription,
+                null,
                 cancellationToken);
 
             // Put suggestions next to the default attachment, or next to the executable if not set.

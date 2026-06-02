@@ -1,24 +1,16 @@
 import React, { useState } from 'react';
 import './App.css';
-import { AuthShell } from './components/AuthShell';
-import { OnboardingSetup } from './components/OnboardingSetup';
+import { LandingPage } from './components/LandingPage';
 import { EmailSender } from './components/EmailSender';
 import { AISuggestions } from './components/AISuggestions';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'setup' | 'email' | 'suggestions'>('setup');
-  const isConfigured = true; // TODO: wire from onboarding if needed later
+  const [activeTab, setActiveTab] = useState<'email' | 'suggestions'>('email');
+  const isConfigured = true;
 
   return (
-    <AuthShell>
+    <LandingPage>
       <div className="tabs">
-        <button
-          type="button"
-          className={activeTab === 'setup' ? 'tab active' : 'tab'}
-          onClick={() => setActiveTab('setup')}
-        >
-          Setup & Onboarding
-        </button>
         <button
           type="button"
           className={activeTab === 'email' ? 'tab active' : 'tab'}
@@ -41,10 +33,9 @@ function App() {
         </button>
       </div>
 
-      {activeTab === 'setup' && <OnboardingSetup />}
       {activeTab === 'email' && <EmailSender />}
       {activeTab === 'suggestions' && <AISuggestions />}
-    </AuthShell>
+    </LandingPage>
   );
 }
 

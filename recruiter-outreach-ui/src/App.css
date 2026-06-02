@@ -1,3 +1,38 @@
+/* Header bar wrapper (scrolls with page) */
+.app-header-bar {
+  position: static; /* not sticky/fixed; will scroll away */
+  width: 100%;
+  padding: 0 0 6px 0; /* no top padding, keep bottom padding */
+  margin-bottom: 12px; /* space between header and body */
+  background: transparent; /* match page background */
+  backdrop-filter: none;
+  border-bottom: none;
+}
+
+/* Top header: brand left, user/actions right */
+.app-header {
+  width: 100%;
+  margin: 0; /* no side gutters */
+  padding: 0 0 0 16px; /* add left padding only */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-title {
+  font-family: Calibri, 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 400; /* non-bold */
+  font-size: 1.6rem;
+  margin: 0;
+  text-align: left;
+  color: #f9fafb;
+}
 .App {
   min-height: 100vh;
   display: flex;
@@ -6,15 +41,15 @@
   background: radial-gradient(circle at top left, #4f46e5 0, #111827 45%, #020617 100%);
   color: #e5e7eb;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  padding: 32px 16px;
+  padding: 0 16px 32px; /* no top padding so header sits at very top */
   box-sizing: border-box;
 }
 
 .App h1 {
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 500;
   text-align: center;
-  margin: 0 0 28px;
+  margin: 28px 0 28px;
   color: #f9fafb;
   letter-spacing: 0.02em;
 }
@@ -126,6 +161,165 @@
 .actions button:not(:disabled):hover {
   transform: translateY(-1px);
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.9);
+}
+
+/* Utility classes used by LandingPage/AuthShell */
+.center {
+  justify-content: center !important;
+  text-align: center;
+}
+
+.center-items {
+  align-items: center !important;
+}
+
+.landing-intro {
+  margin: 0;
+  font-size: 1rem;
+  color: #cbd5f5;
+}
+
+.signed-in-bar {
+  max-width: 980px;
+  margin: 0 auto 8px;
+  font-size: 0.85rem;
+  text-align: right;
+  opacity: 0.85;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  align-items: center;
+}
+
+.signed-in-email {
+  font-weight: 500;
+}
+
+.btn-ghost.small {
+  background: transparent;
+  border: 1px solid #4b5563;
+  color: #e5e7eb;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  margin: 0 10px
+}
+
+/* Modal + buttons used in SignInModal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 16px;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  color: #111827;
+  border-radius: 12px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.25);
+  padding: 20px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.icon-button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.btn-google {
+  width: 100%;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.text-muted-small {
+  text-align: center;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.btn-primary {
+  flex: 1 1 0;
+  border: none;
+  border-radius: 999px;
+  background: #111827;
+  color: #ffffff;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-secondary {
+  flex: 1 1 0;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #111827;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* Remaining modal utilities */
+.modal-title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.modal-body {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label-sm {
+  font-size: 12px;
+  color: #374151;
+}
+
+.input-text {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  padding: 9px 11px;
+  font-size: 0.95rem;
+}
+
+.mt-8 {
+  margin-top: 8px;
 }
 
 .error {
@@ -320,18 +514,84 @@
 }
 
 .suggestions-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 16px;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .suggestions-grid .full-width-mobile {
-  grid-column: 1 / -1;
+  width: 100%;
 }
 
 .suggestions-side {
-  align-self: stretch;
+  align-self: flex-start;
+}
+
+/* JD textarea with plus icon (top-left) and subtle corner dropdown (bottom-right) */
+
+.jd-textarea-wrapper {
+  position: relative;
+  width: 80%;
+  align-self: flex-start;
+}
+
+.jd-textarea-wrapper textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding-left: 42px; /* room for plus icon */
+  min-height: 150px; /* make JD textarea noticeably taller */
+}
+
+.jd-input-icon {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  color: #e5e7eb;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.jd-input-icon:hover {
+  background: rgba(79, 70, 229, 0.9);
+  border-color: rgba(129, 140, 248, 0.9);
+}
+
+.jd-corner-model-select {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  border: none !important; /* override .field select border */
+  border-radius: 999px;
+  padding: 2px 14px 2px 6px;
+  font-size: 0.8rem;
+  background: linear-gradient(135deg, #374151, #020617);
+  color: #e5e7eb;
+  cursor: pointer;
+  outline: none !important;
+  width: auto !important; /* override .field select width: 100% */
+  max-width: 180px;
+  display: inline-block;
+  box-shadow: none;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.jd-corner-model-select:hover,
+.jd-corner-model-select:focus,
+.jd-corner-model-select:focus-visible {
+  background: linear-gradient(135deg, #4b5563, #020617);
+  color: #ffffff;
+  box-shadow: none;
 }
 
 @media (min-width: 768px) {

@@ -5,8 +5,5 @@ namespace RecruiterOutreach.Core.Gemini;
 
 public interface IGeminiPersonalizationService
 {
-    Task<GeminiPersonalizationResult> PersonalizeAsync(
-        string resumeText,
-        string jobDescription,
-        CancellationToken cancellationToken = default);
+    Task<GeminiPersonalizationResult> ResumeSuggestionAsync(string resumeText, string jobDescription, string? modelId, CancellationToken cancellationToken = default);
 }

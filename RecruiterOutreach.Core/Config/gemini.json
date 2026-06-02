@@ -1,0 +1,26 @@
+{
+  "DefaultModelId": "gemini-3.5-flash",
+  "Models": [
+    {
+      "Id": "gemini-3.1-pro",
+      "DisplayName": "Advanced",
+      "Model": "gemini-3.1-pro",
+      "MaxRequestsPerMinute": 5,
+      "MaxRequestsPerDay": 100
+    },
+    {
+      "Id": "gemini-3.5-flash",
+      "DisplayName": "Standard",
+      "Model": "gemini-3.5-flash",
+      "MaxRequestsPerMinute": 5,
+      "MaxRequestsPerDay": 100
+    },
+    {
+      "Id": "gemini-3.1-flash-lite",
+      "DisplayName": "Lite",
+      "Model": "gemini-3.1-flash-lite",
+      "MaxRequestsPerMinute": 15,
+      "MaxRequestsPerDay": 1000
+    }
+  ]
+}
