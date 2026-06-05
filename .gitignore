@@ -48,6 +48,7 @@ launchSettings.json
 client_secret.json
 EmailTemplates/
 
+
 # MSTest test Results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
