@@ -42,6 +42,12 @@ bld/
 Generated\ Files/
 Resume/
 
+# Ignore specific files
+appsettings.Development.json
+launchSettings.json
+client_secret.json
+EmailTemplates/
+
 # MSTest test Results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
