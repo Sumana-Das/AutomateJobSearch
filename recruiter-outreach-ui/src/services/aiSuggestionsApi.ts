@@ -1,3 +1,5 @@
+import { ApiEndpoints, Messages } from '../constants';
+
 export type ScoringView = {
   keywordsToAdd: string[];
   missingKeywords: string[];
@@ -30,13 +32,13 @@ export async function fetchSuggestions(input: {
     formData.append('resume', input.resumeFile);
   }
 
-  const response = await fetch('/api/outreach/suggestions', {
+  const response = await fetch(ApiEndpoints.Suggestions, {
     method: 'POST',
     body: formData,
   });
 
   if (!response.ok) {
-    throw new Error(`Suggestions request failed with status ${response.status}`);
+    throw new Error(Messages.SuggestionsStatus(response.status));
   }
 
   return (await response.json()) as SuggestionsData;

@@ -27,7 +27,7 @@ public sealed class SmtpEmailSender : IEmailSender
             From = new MailAddress(_settings.FromAddress),
             Subject = subject,
             Body = body,
-            IsBodyHtml = false
+            IsBodyHtml = Constants.Email.IsBodyHtml
         };
 
         message.To.Add(new MailAddress(to));
@@ -36,7 +36,7 @@ public sealed class SmtpEmailSender : IEmailSender
         {
             if (!File.Exists(attachmentPath))
             {
-                _logger.LogWarning("Attachment file not found at path {AttachmentPath}", attachmentPath);
+                _logger.LogWarning(Constants.Email.Logs.AttachmentNotFound, attachmentPath);
             }
             else
             {
@@ -44,11 +44,11 @@ public sealed class SmtpEmailSender : IEmailSender
             }
         }
 
-        var password = Environment.GetEnvironmentVariable("GMAIL_APP_PASSWORD");
+        var password = Environment.GetEnvironmentVariable(Constants.Smtp.Env.GmailAppPasswordKey);
         if (string.IsNullOrWhiteSpace(password))
         {
-            _logger.LogError("GMAIL_APP_PASSWORD environment variable is not set. Cannot authenticate to SMTP server.");
-            throw new InvalidOperationException("GMAIL_APP_PASSWORD environment variable is not set.");
+            _logger.LogError(Constants.Smtp.Errors.AppPasswordMissingLog);
+            throw new InvalidOperationException(Constants.Smtp.Errors.AppPasswordMissing);
         }
 
         using var client = new SmtpClient(_settings.Host, _settings.Port)
@@ -59,11 +59,11 @@ public sealed class SmtpEmailSender : IEmailSender
                 password)
         };
 
-        _logger.LogInformation("Sending email to {To} with subject '{Subject}'", to, subject);
+        _logger.LogInformation(Constants.Email.Logs.Sending, to, subject);
 
         // SmtpClient does not support CancellationToken directly.
         await client.SendMailAsync(message);
 
-        _logger.LogInformation("Email successfully sent to {To}", to);
+        _logger.LogInformation(Constants.Email.Logs.Sent, to);
     }
 }

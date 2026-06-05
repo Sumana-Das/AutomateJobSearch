@@ -32,26 +32,26 @@ public static class GeminiRateLimiter
             lock (rateLock)
             {
                 // Clean old entries from the 1-minute window
-                while (minuteWindow.Count > 0 && (now - minuteWindow.Peek()).TotalSeconds >= 60)
+                while (minuteWindow.Count > 0 && (now - minuteWindow.Peek()).TotalSeconds >= Constants.RateLimiter.MinuteWindowSeconds)
                 {
                     minuteWindow.Dequeue();
                 }
 
                 // Clean old entries from the 1-day window
-                while (dayWindow.Count > 0 && (now - dayWindow.Peek()).TotalDays >= 1)
+                while (dayWindow.Count > 0 && (now - dayWindow.Peek()).TotalDays >= Constants.RateLimiter.DayWindowDays)
                 {
                     dayWindow.Dequeue();
                 }
 
                 if (rpdLimit > 0 && dayWindow.Count >= rpdLimit)
                 {
-                    throw new InvalidOperationException("Gemini daily rate limit reached for this application. Please try again tomorrow or upgrade your plan.");
+                    throw new InvalidOperationException(Constants.RateLimiter.DailyLimitReached);
                 }
 
                 if (rpmLimit > 0 && minuteWindow.Count >= rpmLimit)
                 {
                     var oldest = minuteWindow.Peek();
-                    var waitUntil = oldest.AddMinutes(1);
+                    var waitUntil = oldest.AddMinutes(Constants.RateLimiter.MinuteWindowSeconds / 60.0);
                     var toWait = waitUntil - now;
                     if (toWait < TimeSpan.Zero)
                     {

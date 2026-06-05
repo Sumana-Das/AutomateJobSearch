@@ -52,7 +52,7 @@ public sealed class GeminiPersonalizationService : IGeminiPersonalizationService
 
         if (string.IsNullOrWhiteSpace(_settings.ResumeSuggestionPromptTemplate))
         {
-            throw new InvalidOperationException("Gemini ResumeSuggestionPromptTemplate must be configured in OutreachSettings.Gemini.");
+            throw new InvalidOperationException(Constants.Gemini.Errors.MissingResumePrompt);
         }
 
         _resumeSuggestionPromptTemplate = _settings.ResumeSuggestionPromptTemplate;
@@ -64,11 +64,11 @@ public sealed class GeminiPersonalizationService : IGeminiPersonalizationService
         string? modelId,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("[Gemini] Starting personalization against JD of length {Length} characters.", jobDescription.Length);
+        _logger.LogInformation(Constants.Gemini.Logs.StartingPersonalization, jobDescription.Length);
 
         if (string.IsNullOrWhiteSpace(_settings.ApiKey))
         {
-            throw new InvalidOperationException("Gemini settings are not configured. Please set Model and ApiKey.");
+            throw new InvalidOperationException(Constants.Gemini.Errors.MissingConfig);
         }
 
         var prompt = BuildResumeSuggestionPrompt(jobDescription, resumeText);
@@ -77,7 +77,7 @@ public sealed class GeminiPersonalizationService : IGeminiPersonalizationService
         string effectiveModel = _settings.Model;
         int rpmLimit = _rpmLimit;
         int rpdLimit = _rpdLimit;
-        string limiterKey = "default";
+        string limiterKey = Constants.Gemini.Limiter.DefaultKey;
 
         GeminiModelConfig? selectedModelConfig = null;
         if (_geminiConfig is not null && _geminiConfig.Models is { Count: > 0 })
@@ -96,13 +96,13 @@ public sealed class GeminiPersonalizationService : IGeminiPersonalizationService
 
             rpmLimit = selectedModelConfig.MaxRequestsPerMinute;
             rpdLimit = selectedModelConfig.MaxRequestsPerDay;
-            limiterKey = selectedModelConfig.Id ?? effectiveModel ?? "default";
+            limiterKey = selectedModelConfig.Id ?? effectiveModel ?? Constants.Gemini.Limiter.DefaultKey;
         }
         else
         {
             if (string.IsNullOrWhiteSpace(effectiveModel))
             {
-                throw new InvalidOperationException("Gemini model must be configured either in OutreachSettings.Gemini or GeminiConfig.");
+                throw new InvalidOperationException(Constants.Gemini.Errors.MissingModel);
             }
 
             limiterKey = effectiveModel;
@@ -144,7 +144,7 @@ public sealed class GeminiPersonalizationService : IGeminiPersonalizationService
 
             if (string.IsNullOrWhiteSpace(text))
             {
-                throw new InvalidOperationException("Gemini response did not contain any text.");
+                throw new InvalidOperationException(Constants.Gemini.Errors.ResponseNoText);
             }
 
             var (narrative, jdKeywords, resumeKeywords, missingKeywords, keywordsToAdd, geminiMatchScore) =
@@ -162,16 +162,16 @@ public sealed class GeminiPersonalizationService : IGeminiPersonalizationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[Gemini] Failed to parse response JSON.");
-            throw new InvalidOperationException("Failed to parse Gemini response.", ex);
+            _logger.LogError(ex, Constants.Gemini.Logs.ParseFailedTag);
+            throw new InvalidOperationException(Constants.Gemini.Errors.ParseFailed, ex);
         }
     }
     private string BuildResumeSuggestionPrompt(string jobDescription, string resumeText)
     {
         var prompt = _resumeSuggestionPromptTemplate;
 
-        prompt = prompt.Replace("{{JobDescription}}", jobDescription ?? string.Empty, StringComparison.Ordinal);
-        prompt = prompt.Replace("{{ResumeText}}", resumeText ?? string.Empty, StringComparison.Ordinal);
+        prompt = prompt.Replace(Constants.Gemini.Prompt.PlaceholderJobDescription, jobDescription ?? string.Empty, StringComparison.Ordinal);
+        prompt = prompt.Replace(Constants.Gemini.Prompt.PlaceholderResumeText, resumeText ?? string.Empty, StringComparison.Ordinal);
 
         return prompt;
     }
@@ -183,11 +183,11 @@ public sealed class GeminiPersonalizationService : IGeminiPersonalizationService
         List<string> KeywordsToAdd,
         string GeminiMatchScore) ParseGeminiResponse(string text)
     {
-        const string marker = "JSON_KEYWORDS_START";
+        const string marker = Constants.Gemini.Response.JsonMarker;
         var markerIndex = text.IndexOf(marker, StringComparison.Ordinal);
         if (markerIndex < 0)
         {
-            throw new InvalidOperationException("Gemini response did not contain the expected JSON marker.");
+            throw new InvalidOperationException(Constants.Gemini.Errors.ResponseNoMarker);
         }
 
         var narrativePart = text.Substring(0, markerIndex).TrimEnd();
@@ -195,18 +195,18 @@ public sealed class GeminiPersonalizationService : IGeminiPersonalizationService
 
         if (string.IsNullOrWhiteSpace(jsonPart))
         {
-            throw new InvalidOperationException("Gemini response did not contain the expected JSON block after the marker.");
+            throw new InvalidOperationException(Constants.Gemini.Errors.ResponseNoJsonAfterMarker);
         }
 
         using var resultDoc = JsonDocument.Parse(jsonPart);
         var resultRoot = resultDoc.RootElement;
 
-        var geminiMatchScore = resultRoot.GetProperty("matchScore").GetString() ?? "Unknown";
+        var geminiMatchScore = resultRoot.GetProperty(Constants.Gemini.Response.PropMatchScore).GetString() ?? Constants.Gemini.Response.Unknown;
 
-        var jdKeywordsFromGemini = ExtractKeywordsArray(resultRoot, "jdKeywords");
-        var resumeKeywordsFromGemini = ExtractKeywordsArray(resultRoot, "resumeKeywords");
-        var missingKeywordsFromGemini = ExtractKeywordsArray(resultRoot, "missingKeywords");
-        var keywordsToAddFromGemini = ExtractKeywordsArray(resultRoot, "keywordsToAdd");
+        var jdKeywordsFromGemini = ExtractKeywordsArray(resultRoot, Constants.Gemini.Response.PropJdKeywords);
+        var resumeKeywordsFromGemini = ExtractKeywordsArray(resultRoot, Constants.Gemini.Response.PropResumeKeywords);
+        var missingKeywordsFromGemini = ExtractKeywordsArray(resultRoot, Constants.Gemini.Response.PropMissingKeywords);
+        var keywordsToAddFromGemini = ExtractKeywordsArray(resultRoot, Constants.Gemini.Response.PropKeywordsToAdd);
 
         return (narrativePart,
             jdKeywordsFromGemini,
@@ -238,7 +238,7 @@ public sealed class GeminiPersonalizationService : IGeminiPersonalizationService
     {
         if (jdKeywordsFromGemini == null || jdKeywordsFromGemini.Count == 0)
         {
-            return "Unknown";
+            return Constants.Gemini.Response.Unknown;
         }
 
         var jdDistinct = jdKeywordsFromGemini
@@ -257,10 +257,10 @@ public sealed class GeminiPersonalizationService : IGeminiPersonalizationService
         var ratio = presentCount / (double)jdDistinct.Count;
 
         var ourMatchScore = ratio >= _highThreshold
-            ? "High"
+            ? Constants.Gemini.MatchScore.High
             : ratio >= _mediumThreshold
-                ? "Medium"
-                : "Low";
+                ? Constants.Gemini.MatchScore.Medium
+                : Constants.Gemini.MatchScore.Low;
 
         // Prefer ourMissing over the model's missingKeywords for deterministic behavior
         missingKeywordsFromGemini = ourMissing;

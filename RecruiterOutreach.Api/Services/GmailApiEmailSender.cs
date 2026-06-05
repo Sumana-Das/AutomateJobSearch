@@ -7,6 +7,7 @@ using System.Text;
 using RecruiterOutreach.Core.Emailing;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using RecruiterOutreach.Api;
 
 namespace RecruiterOutreach.Api.Services;
 
@@ -31,18 +32,18 @@ public sealed class GmailApiEmailSender : IEmailSender
         var senderEmail = ResolveCurrentUserEmail();
         if (string.IsNullOrWhiteSpace(senderEmail))
         {
-            throw new InvalidOperationException("No signed-in user found. Please sign in with Google to send email.");
+            throw new InvalidOperationException(Constants.Responses.NoSignedInUser);
         }
 
         if (!_tokens.TryGet(senderEmail, out var accessToken, out var refreshToken))
         {
-            throw new InvalidOperationException("No OAuth tokens found for the current user. Please sign in again.");
+            throw new InvalidOperationException(Constants.Responses.NoOAuthTokensForUser);
         }
 
         var initializer = new BaseClientService.Initializer
         {
             HttpClientInitializer = GoogleCredential.FromAccessToken(accessToken),
-            ApplicationName = "TailorMailer AI",
+            ApplicationName = Constants.Defaults.ApplicationName,
         };
 
         using var gmail = new GmailService(initializer);
@@ -51,7 +52,7 @@ public sealed class GmailApiEmailSender : IEmailSender
         var raw = BuildRawMessage(senderEmail, to, subject, body, attachmentPath);
         var message = new Message { Raw = raw };
 
-        var request = gmail.Users.Messages.Send(message, "me");
+        var request = gmail.Users.Messages.Send(message, Constants.Defaults.Me);
         await request.ExecuteAsync(cancellationToken);
     }
 
@@ -59,7 +60,7 @@ public sealed class GmailApiEmailSender : IEmailSender
     {
         var http = _httpContextAccessor.HttpContext;
         if (http is null) return string.Empty;
-        if (!http.Request.Cookies.TryGetValue("tm_user", out var payload) || string.IsNullOrWhiteSpace(payload))
+        if (!http.Request.Cookies.TryGetValue(Constants.Defaults.CookieUserName, out var payload) || string.IsNullOrWhiteSpace(payload))
         {
             return string.Empty;
         }
@@ -67,7 +68,7 @@ public sealed class GmailApiEmailSender : IEmailSender
         {
             var json = Encoding.UTF8.GetString(Convert.FromBase64String(payload));
             using var doc = JsonDocument.Parse(json);
-            return doc.RootElement.TryGetProperty("email", out var e) ? (e.GetString() ?? string.Empty) : string.Empty;
+            return doc.RootElement.TryGetProperty(Constants.Defaults.JsonPropEmail, out var e) ? (e.GetString() ?? string.Empty) : string.Empty;
         }
         catch
         {
@@ -82,62 +83,17 @@ public sealed class GmailApiEmailSender : IEmailSender
         string rawText;
         if (!hasAttachment)
         {
-            // Simple text/plain message
-            var sb = new StringBuilder();
-            sb.AppendLine($"From: {from}");
-            sb.AppendLine($"To: {to}");
-            sb.AppendLine($"Subject: {subject}");
-            sb.AppendLine("MIME-Version: 1.0");
-            sb.AppendLine("Content-Type: text/plain; charset=\"utf-8\"");
-            sb.AppendLine("Content-Transfer-Encoding: 7bit");
-            sb.AppendLine();
-            sb.AppendLine(body ?? string.Empty);
-            rawText = sb.ToString();
+            rawText = Constants.Email.BuildPlainTextEmail(from, to, subject, body);
         }
         else
         {
-            var boundary = "===============TAILORMAILER_" + Guid.NewGuid().ToString("N");
+            var boundary = Constants.Defaults.BoundaryPrefix + Guid.NewGuid().ToString("N");
             var fileName = Path.GetFileName(attachmentPath!);
             var mimeType = GuessMimeType(fileName);
             var fileBytes = File.ReadAllBytes(attachmentPath!);
             var fileBase64 = Convert.ToBase64String(fileBytes);
 
-            var sb = new StringBuilder();
-            sb.AppendLine($"From: {from}");
-            sb.AppendLine($"To: {to}");
-            sb.AppendLine($"Subject: {subject}");
-            sb.AppendLine("MIME-Version: 1.0");
-            sb.AppendLine($"Content-Type: multipart/mixed; boundary=\"{boundary}\"");
-            sb.AppendLine();
-
-            // Text part
-            sb.AppendLine($"--{boundary}");
-            sb.AppendLine("Content-Type: text/plain; charset=\"utf-8\"");
-            sb.AppendLine("Content-Transfer-Encoding: 7bit");
-            sb.AppendLine();
-            sb.AppendLine(body ?? string.Empty);
-            sb.AppendLine();
-
-            // Attachment part
-            sb.AppendLine($"--{boundary}");
-            sb.AppendLine($"Content-Type: {mimeType}; name=\"{fileName}\"");
-            sb.AppendLine("Content-Transfer-Encoding: base64");
-            sb.AppendLine($"Content-Disposition: attachment; filename=\"{fileName}\"");
-            sb.AppendLine();
-
-            // Optionally wrap lines to 76 chars per RFC; Gmail accepts unwrapped but we wrap for safety
-            const int wrap = 76;
-            for (int i = 0; i < fileBase64.Length; i += wrap)
-            {
-                var len = Math.Min(wrap, fileBase64.Length - i);
-                sb.AppendLine(fileBase64.Substring(i, len));
-            }
-
-            sb.AppendLine();
-            sb.AppendLine($"--{boundary}--");
-            sb.AppendLine();
-
-            rawText = sb.ToString();
+            rawText = Constants.Email.BuildMultipartMixedEmail(from, to, subject, body, boundary, fileName, mimeType, fileBase64, Constants.Defaults.Base64WrapColumns);
         }
 
         // Gmail API expects base64url encoded raw message
@@ -153,14 +109,14 @@ public sealed class GmailApiEmailSender : IEmailSender
         var ext = Path.GetExtension(fileName).ToLowerInvariant();
         return ext switch
         {
-            ".pdf" => "application/pdf",
-            ".txt" => "text/plain",
-            ".doc" => "application/msword",
-            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            ".png" => "image/png",
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".gif" => "image/gif",
-            _ => "application/octet-stream"
+            ".pdf" => Constants.Email.ApplicationPdf,
+            ".txt" => Constants.Email.TextPlain,
+            ".doc" => Constants.Email.ApplicationMsWord,
+            ".docx" => Constants.Email.ApplicationDocx,
+            ".png" => Constants.Email.ImagePng,
+            ".jpg" or ".jpeg" => Constants.Email.ImageJpeg,
+            ".gif" => Constants.Email.ImageGif,
+            _ => Constants.Email.ApplicationOctetStream
         };
     }
 }

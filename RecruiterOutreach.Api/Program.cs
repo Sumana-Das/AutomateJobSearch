@@ -4,21 +4,22 @@ using RecruiterOutreach.Core.Emailing;
 using RecruiterOutreach.Core.Gemini;
 using RecruiterOutreach.Core.Config;
 using Google.GenAI;
-using RecruiterOutreach.Core.Outreach;
 using RecruiterOutreach.Api.Endpoints;
 using RecruiterOutreach.Api.Services;
+using Constants = RecruiterOutreach.Api.Constants;
+using RecruiterOutreach.Core.Outreach;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Load OutreachSettings from the named section in configuration
 var outreachSettings = builder.Configuration
-    .GetSection("OutreachSettings")
+    .GetSection(Constants.Defaults.OutreachSettingsSection)
     .Get<OutreachSettings>() ?? new OutreachSettings();
 
 // Optionally load Gemini multi-model configuration from Config/gemini.json
 var baseDir = AppContext.BaseDirectory;
-var configDir = Path.Combine(baseDir, "Config");
-var geminiConfigPath = Path.Combine(configDir, "gemini.json");
+var configDir = Path.Combine(baseDir, Constants.Defaults.ConfigDirName);
+var geminiConfigPath = Path.Combine(configDir, Constants.Defaults.GeminiConfigFileName);
 GeminiConfig? geminiConfig = null;
 if (File.Exists(geminiConfigPath))
 {
@@ -34,14 +35,14 @@ if (File.Exists(geminiConfigPath))
 }
 
 // Load resume suggestion prompt from Config/Prompts/resume.json, probing common locations
-var promptsDir = Path.Combine(configDir, "Prompts");
+var promptsDir = Path.Combine(configDir, Constants.Defaults.PromptsDirName);
 var candidates = new List<string>();
 // 1) API base dir: bin/.../Config/Prompts/resume.json
-candidates.Add(Path.Combine(promptsDir, "resume.json"));
+candidates.Add(Path.Combine(promptsDir, Constants.Defaults.ResumePromptFileName));
 // 2) Content root: <repo>/RecruiterOutreach.Api/Config/Prompts/resume.json
-candidates.Add(Path.Combine(builder.Environment.ContentRootPath, "Config", "Prompts", "resume.json"));
+candidates.Add(Path.Combine(builder.Environment.ContentRootPath, Constants.Defaults.ConfigDirName, Constants.Defaults.PromptsDirName, Constants.Defaults.ResumePromptFileName));
 // 3) Core project: <repo>/RecruiterOutreach.Core/Config/Prompts/resume.json
-var coreConfig = Path.Combine(builder.Environment.ContentRootPath, "..", "RecruiterOutreach.Core", "Config", "Prompts", "resume.json");
+var coreConfig = Path.Combine(builder.Environment.ContentRootPath, "..", "RecruiterOutreach.Core", Constants.Defaults.ConfigDirName, Constants.Defaults.PromptsDirName, Constants.Defaults.ResumePromptFileName);
 candidates.Add(Path.GetFullPath(coreConfig));
 
 string? foundResumePrompt = candidates.FirstOrDefault(File.Exists);
@@ -52,7 +53,7 @@ if (!string.IsNullOrWhiteSpace(foundResumePrompt))
         var promptJson = File.ReadAllText(foundResumePrompt);
         using var doc = JsonDocument.Parse(promptJson);
         var root = doc.RootElement;
-        if (root.TryGetProperty("Template", out var templateProp) && templateProp.ValueKind == JsonValueKind.String)
+        if (root.TryGetProperty(Constants.Defaults.PromptTemplateJsonProp, out var templateProp) && templateProp.ValueKind == JsonValueKind.String)
         {
             var template = templateProp.GetString();
             if (!string.IsNullOrWhiteSpace(template))
@@ -68,10 +69,10 @@ if (!string.IsNullOrWhiteSpace(foundResumePrompt))
 }
 
 // Load role email templates from JSON files (if present)
-var templatesFolder = Path.Combine(AppContext.BaseDirectory, "EmailTemplates");
+var templatesFolder = Path.Combine(AppContext.BaseDirectory, Constants.Defaults.EmailTemplatesDirName);
 if (Directory.Exists(templatesFolder))
 {
-    foreach (var file in Directory.GetFiles(templatesFolder, "*.json", SearchOption.TopDirectoryOnly))
+    foreach (var file in Directory.GetFiles(templatesFolder, Constants.Defaults.TemplatesFilePattern, SearchOption.TopDirectoryOnly))
     {
         try
         {
@@ -111,7 +112,7 @@ builder.Services.AddSingleton(sp =>
     // Prefer explicit key from settings, fall back to environment variable used by Google.GenAI
     var apiKey = !string.IsNullOrWhiteSpace(geminiSettings.ApiKey)
         ? geminiSettings.ApiKey
-        : Environment.GetEnvironmentVariable("GEMINI_API_KEY");
+        : Environment.GetEnvironmentVariable(Constants.ConfigurationKeys.GeminiApiKey);
 
     return string.IsNullOrWhiteSpace(apiKey)
         ? new Client()

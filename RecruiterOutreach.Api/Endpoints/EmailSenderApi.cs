@@ -13,7 +13,7 @@ public static class EmailSenderApi
     public static IEndpointRouteBuilder MapEmailSenderApi(this IEndpointRouteBuilder app)
     {
         // /api/templates
-        app.MapGet("/api/templates", (OutreachSettings settings) =>
+        app.MapGet(Constants.ApiEndpoints.GetTemplatesApi, (OutreachSettings settings) =>
         {
             var roleTemplates = settings.RoleEmailTemplates ?? new List<RoleEmailTemplateSettings>();
 
@@ -26,8 +26,8 @@ public static class EmailSenderApi
                         ? Array.Empty<string>()
                         : new[]
                         {
-                            r.Templates.Hr is not null ? "Hr" : null,
-                            r.Templates.Referral is not null ? "Referral" : null
+                            r.Templates.Hr is not null ? Constants.Defaults.Hr : null,
+                            r.Templates.Referral is not null ? Constants.Defaults.Referral : null
                         }.Where(x => x is not null)),
                     Templates = r.Templates is null
                         ? null
@@ -44,10 +44,10 @@ public static class EmailSenderApi
 
             return Results.Ok(roles);
         })
-        .WithName("GetTemplates");
+        .WithName(Constants.Defaults.Templates);
 
         // /api/templates/preview
-        app.MapGet("/api/templates/preview", ([FromQuery] string roleKey, [FromQuery] string templateKind, OutreachSettings settings) =>
+        app.MapGet(Constants.ApiEndpoints.GetTemplatePreviewApi, ([FromQuery] string roleKey, [FromQuery] string templateKind, OutreachSettings settings) =>
         {
             var role = settings.RoleEmailTemplates
                 .FirstOrDefault(r => string.Equals(r.Key, roleKey, StringComparison.OrdinalIgnoreCase));
@@ -57,7 +57,7 @@ public static class EmailSenderApi
                 return Results.NotFound();
             }
 
-            var variant = templateKind.Equals("Referral", StringComparison.OrdinalIgnoreCase)
+            var variant = templateKind.Equals(Constants.Defaults.Referral, StringComparison.OrdinalIgnoreCase)
                 ? role.Templates.Referral
                 : role.Templates.Hr;
 
@@ -72,10 +72,10 @@ public static class EmailSenderApi
                 variant.BodyTemplate
             });
         })
-        .WithName("GetTemplatePreview");
+        .WithName(Constants.Defaults.GetTemplatePreview);
 
         // /api/outreach/send
-        app.MapPost("/api/outreach/send", async (
+        app.MapPost(Constants.ApiEndpoints.SendEmailApi, async (
             [FromForm] string recruiters,
             [FromForm] string? roleKey,
             [FromForm] string? templateKind,
@@ -88,7 +88,7 @@ public static class EmailSenderApi
             OutreachSettings settings) =>
         {
             // Allow recruiter emails to be separated by commas, semicolons, spaces, or newlines
-            var recruiterEmails = Regex.Split(recruiters ?? string.Empty, "[\\s,;]+")
+            var recruiterEmails = Regex.Split(recruiters ?? string.Empty, Constants.Email.EmailSplitPattern)
                 .Where(x => !string.IsNullOrWhiteSpace(x))
                 .ToArray();
 
@@ -118,7 +118,7 @@ public static class EmailSenderApi
 
                     Directory.CreateDirectory(baseFolder);
 
-                    var tempFileName = $"UploadedResume_{DateTime.Now:yyyyMMddHHmmssfff}_{Guid.NewGuid():N}{Path.GetExtension(resume.FileName)}";
+                    var tempFileName = Constants.Defaults.GenerateResumeFileName(resume.FileName);
                     var tempPath = Path.Combine(baseFolder, tempFileName);
 
                     using (var fileStream = File.Create(tempPath))
@@ -157,7 +157,7 @@ public static class EmailSenderApi
             return Results.Ok();
         })
         .DisableAntiforgery()
-        .WithName("SendEmails");
+        .WithName(Constants.Defaults.SendEmails);
 
         return app;
     }

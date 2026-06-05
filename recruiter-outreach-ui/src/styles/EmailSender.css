@@ -1,0 +1,46 @@
+/* EmailSender component styles */
+
+.form-section.email-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 20px;
+  row-gap: 14px;
+}
+
+.form-section.email-grid .full-width {
+  grid-column: 1 / -1;
+}
+
+.form-section.email-grid .field input,
+.form-section.email-grid .field select,
+.form-section.email-grid .field textarea {
+  max-width: 100%;
+}
+
+.form-section.email-grid .actions.full-width {
+  justify-content: center;
+}
+
+.form-section.email-grid .actions.full-width button {
+  flex: 0 0 auto;
+}
+
+.form-section.email-grid .field:nth-of-type(1) { /* Role */
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.form-section.email-grid .field:nth-of-type(2) { /* Template */
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.form-section.email-grid .recruiters-field {
+  grid-column: 1; /* left column only */
+  grid-row: 2;
+}
+
+.form-section.email-grid .field.body-field { /* Subject + body block on right */
+  grid-column: 2;
+  grid-row: 2;
+}

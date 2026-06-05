@@ -1,3 +1,5 @@
+import { ApiEndpoints, Messages, Values } from '../constants';
+
 export type TemplateVariant = {
   subjectTemplate: string;
   bodyTemplate: string;
@@ -14,9 +16,9 @@ export type TemplateDto = {
 };
 
 export async function fetchTemplates(): Promise<TemplateDto[]> {
-  const response = await fetch('/api/templates');
+  const response = await fetch(ApiEndpoints.Templates);
   if (!response.ok) {
-    throw new Error(`Failed to load templates (status ${response.status})`);
+    throw new Error(Messages.LoadTemplatesStatus(response.status));
   }
 
   const raw = (await response.json()) as any[];
@@ -63,7 +65,7 @@ export async function sendEmails(input: {
   formData.append('recruiters', input.recruiters);
   formData.append('roleKey', input.roleKey);
   formData.append('templateKind', input.templateKind);
-  formData.append('company', '');
+  formData.append('company', Values.EmptyCompany);
   formData.append('subject', input.subject);
   formData.append('emailBody', input.emailBody);
   formData.append('persistResume', String(input.persistResume));
@@ -72,12 +74,19 @@ export async function sendEmails(input: {
     formData.append('resume', input.resumeFile);
   }
 
-  const response = await fetch('/api/outreach/send', {
+  const response = await fetch(ApiEndpoints.SendEmails, {
     method: 'POST',
     body: formData,
   });
 
   if (!response.ok) {
-    throw new Error(`Send request failed with status ${response.status}`);
+    if (response.status === 401) {
+      const err: any = new Error(Messages.SessionExpired);
+      err.code = Values.SessionExpiredCode;
+      err.status = 401;
+      throw err;
+    }
+    const text = await response.text().catch(() => '');
+    throw new Error(text || Messages.SendStatus(response.status));
   }
 }

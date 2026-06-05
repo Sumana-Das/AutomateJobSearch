@@ -14,7 +14,7 @@ public static class ResumeTextExtractor
     {
         var extension = Path.GetExtension(path).ToLowerInvariant();
 
-        if (extension == ".pdf")
+        if (extension == Constants.FileExtensions.Pdf)
         {
             await using var stream = File.OpenRead(path);
             return ExtractTextFromPdf(stream);
@@ -27,7 +27,7 @@ public static class ResumeTextExtractor
     {
         var extension = fileExtension.ToLowerInvariant();
 
-        if (extension == ".pdf")
+        if (extension == Constants.FileExtensions.Pdf)
         {
             return ExtractTextFromPdf(stream);
         }

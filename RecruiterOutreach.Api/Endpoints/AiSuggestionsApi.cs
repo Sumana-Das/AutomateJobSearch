@@ -13,7 +13,7 @@ public static class AiSuggestionsApi
 {
     public static IEndpointRouteBuilder MapAiSuggestionsApi(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/outreach/suggestions", async (
+        app.MapPost(Constants.ApiEndpoints.SuggestionApi, async (
             [FromForm] string jobDescription,
             [FromForm] bool persistResume,
             [FromForm] string? modelId,
@@ -56,8 +56,8 @@ public static class AiSuggestionsApi
 
             var personalization = await gemini.ResumeSuggestionAsync(resumeText, jobDescription, modelId, cancellationToken);
 
-            var jdExcerpt = jobDescription.Length > 1000
-                ? jobDescription.Substring(0, 1000) + "..."
+            var jdExcerpt = jobDescription.Length > Constants.Defaults.JobDescriptionExcerptMaxChars
+                ? jobDescription.Substring(0, Constants.Defaults.JobDescriptionExcerptMaxChars) + Constants.Defaults.Ellipsis
                 : jobDescription;
 
             // For debugging multi-page resume parsing, expose the full parsed text back to the UI.
@@ -84,7 +84,7 @@ public static class AiSuggestionsApi
             return Results.Ok(response);
         })
         .DisableAntiforgery()
-        .WithName("GetSuggestions");
+        .WithName(Constants.Defaults.Suggestions);
 
         return app;
     }

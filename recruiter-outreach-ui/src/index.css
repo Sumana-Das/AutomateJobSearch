@@ -11,3 +11,9 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Component styles */
+@import './styles/EmailSender.css';
+@import './styles/AISuggestions.css';
+@import './styles/LandingPage.css';
+@import './styles/SignInModal.css';

@@ -1,0 +1,28 @@
+/* LandingPage specific styles */
+
+.signed-in-bar {
+  max-width: 980px;
+  margin: 0 auto 8px;
+  font-size: 0.85rem;
+  text-align: right;
+  opacity: 0.85;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  align-items: center;
+}
+
+.signed-in-email {
+  font-weight: 500;
+}
+
+.btn-ghost.small {
+  background: transparent;
+  border: 1px solid #4b5563;
+  color: #e5e7eb;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  margin: 0 10px
+}

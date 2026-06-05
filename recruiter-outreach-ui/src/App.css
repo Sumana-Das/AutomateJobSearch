@@ -1,10 +1,10 @@
 /* Header bar wrapper (scrolls with page) */
 .app-header-bar {
-  position: static; /* not sticky/fixed; will scroll away */
+  position: static;
   width: 100%;
-  padding: 0 0 6px 0; /* no top padding, keep bottom padding */
-  margin-bottom: 12px; /* space between header and body */
-  background: transparent; /* match page background */
+  padding: 0 0 6px 0;
+  margin-bottom: 12px;
+  background: transparent;
   backdrop-filter: none;
   border-bottom: none;
 }
@@ -12,8 +12,8 @@
 /* Top header: brand left, user/actions right */
 .app-header {
   width: 100%;
-  margin: 0; /* no side gutters */
-  padding: 0 0 0 16px; /* add left padding only */
+  margin: 0;
+  padding: 0 0 0 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -27,7 +27,7 @@
 
 .brand-title {
   font-family: Calibri, 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  font-weight: 400; /* non-bold */
+  font-weight: 400;
   font-size: 1.6rem;
   margin: 0;
   text-align: left;
@@ -38,10 +38,10 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  background: radial-gradient(circle at top left, #4f46e5 0, #111827 45%, #020617 100%);
+  background: radial-gradient(circle at top left, #6d28d9 0, #141a2a 48%, #0f172a 100%);
   color: #e5e7eb;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  padding: 0 16px 32px; /* no top padding so header sits at very top */
+  padding: 0 16px 32px;
   box-sizing: border-box;
 }
 
@@ -52,21 +52,6 @@
   margin: 28px 0 28px;
   color: #f9fafb;
   letter-spacing: 0.02em;
-}
-
-.form-section,
-.suggestions-section {
-  max-width: 840px;
-  width: 100%;
-  margin: 0 auto 24px;
-  background: rgba(15, 23, 42, 0.9);
-  border-radius: 18px;
-  padding: 22px 20px;
-  box-shadow:
-    0 18px 45px rgba(15, 23, 42, 0.8),
-    0 0 0 1px rgba(148, 163, 184, 0.15);
-  box-sizing: border-box;
-  backdrop-filter: blur(10px);
 }
 
 .form-section {
@@ -163,7 +148,6 @@
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.9);
 }
 
-/* Utility classes used by LandingPage/AuthShell */
 .center {
   justify-content: center !important;
   text-align: center;
@@ -177,145 +161,6 @@
   margin: 0;
   font-size: 1rem;
   color: #cbd5f5;
-}
-
-.signed-in-bar {
-  max-width: 980px;
-  margin: 0 auto 8px;
-  font-size: 0.85rem;
-  text-align: right;
-  opacity: 0.85;
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  align-items: center;
-}
-
-.signed-in-email {
-  font-weight: 500;
-}
-
-.btn-ghost.small {
-  background: transparent;
-  border: 1px solid #4b5563;
-  color: #e5e7eb;
-  padding: 4px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  margin: 0 10px
-}
-
-/* Modal + buttons used in SignInModal */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-  padding: 16px;
-}
-
-.modal-card {
-  width: 100%;
-  max-width: 420px;
-  background: #ffffff;
-  color: #111827;
-  border-radius: 12px;
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.25);
-  padding: 20px;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.icon-button {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 1.2rem;
-  line-height: 1;
-}
-
-.btn-google {
-  width: 100%;
-  border-radius: 999px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  color: #111827;
-  padding: 10px 14px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.text-muted-small {
-  text-align: center;
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.btn-primary {
-  flex: 1 1 0;
-  border: none;
-  border-radius: 999px;
-  background: #111827;
-  color: #ffffff;
-  padding: 10px 14px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.btn-primary:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.btn-secondary {
-  flex: 1 1 0;
-  border: 1px solid #d1d5db;
-  border-radius: 999px;
-  background: #ffffff;
-  color: #111827;
-  padding: 10px 14px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-/* Remaining modal utilities */
-.modal-title {
-  margin: 0;
-  font-size: 1.1rem;
-}
-
-.modal-body {
-  margin-top: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.form-vertical {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.label-sm {
-  font-size: 12px;
-  color: #374151;
-}
-
-.input-text {
-  width: 100%;
-  border-radius: 10px;
-  border: 1px solid #d1d5db;
-  padding: 9px 11px;
-  font-size: 0.95rem;
 }
 
 .mt-8 {
@@ -333,80 +178,15 @@
   border: 1px solid rgba(248, 113, 113, 0.4);
 }
 
-.suggestions-section h2 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin: 0 0 10px;
-  color: #e5e7eb;
-}
-
-.keywords {
-  margin-bottom: 10px;
-  text-align: left;
-}
-
-.keywords ul {
-  margin: 6px 0 0;
-  padding-left: 18px;
-}
-
-.keywords li {
-  font-size: 0.9rem;
-  color: #d1d5db;
-}
-
-.suggestions-text {
+.success {
   margin-top: 8px;
-  text-align: left;
-}
-
-.suggestions-text pre,
-.suggestions-section pre {
-  margin: 0;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-radius: 10px;
-  background: rgba(15, 23, 42, 0.95);
-  border: 1px solid rgba(55, 65, 81, 0.9);
-  font-size: 0.85rem;
-  overflow-x: auto;
-  color: #e5e7eb;
-}
-
-.suggestions-section details {
-  margin-top: 10px;
-  text-align: left;
-  color: #cbd5f5;
-}
-
-.match-score-track {
-  width: 100%;
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(31, 41, 55, 0.9);
-  border: 1px solid rgba(55, 65, 81, 0.9);
-  overflow: hidden;
-  margin-bottom: 10px;
-}
-
-.match-score-fill {
-  height: 100%;
-  border-radius: inherit;
-  transition: width 0.25s ease, background 0.25s ease;
-}
-
-.suggestions-text-box {
-  margin-top: 8px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(15, 23, 42, 0.95);
-  border: 1px solid rgba(55, 65, 81, 0.9);
-  text-align: left;
-}
-
-.suggestions-narrative {
-  white-space: pre-wrap;
+  background: rgba(34, 197, 94, 0.16);
+  color: #bbf7d0;
   font-size: 0.9rem;
-  color: #e5e7eb;
+  text-align: left;
+  border: 1px solid rgba(34, 197, 94, 0.4);
 }
 
 .section-title {
@@ -422,12 +202,6 @@
   color: #9ca3af;
 }
 
-.suggestions-text-box .section-help {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-}
-
-/* Layout grids for setup, email, and suggestions */
-
 .setup-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr);
@@ -441,33 +215,6 @@
   gap: 12px;
 }
 
-.email-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  column-gap: 20px;
-  row-gap: 14px;
-}
-
-.email-grid .full-width {
-  grid-column: 1 / -1;
-}
-
-/* Make email tab controls more compact instead of spanning full card width */
-/* Let controls fill their grid column but keep the overall card narrower */
-.email-grid .field input,
-.email-grid .field select,
-.email-grid .field textarea {
-  max-width: 100%;
-}
-
-.email-grid .actions.full-width {
-  justify-content: center;
-}
-
-.email-grid .actions.full-width button {
-  flex: 0 0 auto;
-}
-
 .checkbox-inline {
   display: flex;
   align-items: center;
@@ -478,144 +225,6 @@
   width: 12px;
   height: 12px;
   margin-top: 1px;
-}
-
-/* Specific placement for a more uniform layout on the email tab */
-.email-grid .field:nth-of-type(1) { /* Role */
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.email-grid .field:nth-of-type(2) { /* Template */
-  grid-column: 2;
-  grid-row: 1;
-}
-
-.email-grid .recruiters-field {
-  grid-column: 1; /* left column only */
-  grid-row: 2;
-}
-
-.email-grid .field.body-field { /* Subject + body block on right */
-  grid-column: 2;
-  grid-row: 2;
-}
-
-.email-grid .recruiters-field > div,
-.email-grid .field.body-field > div {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.email-grid .recruiters-field textarea,
-.email-grid .field.body-field textarea {
-  min-height: 180px;
-}
-
-.suggestions-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  align-items: stretch;
-}
-
-.suggestions-grid .full-width-mobile {
-  width: 100%;
-}
-
-.suggestions-side {
-  align-self: flex-start;
-}
-
-/* JD textarea with plus icon (top-left) and subtle corner dropdown (bottom-right) */
-
-.jd-textarea-wrapper {
-  position: relative;
-  width: 80%;
-  align-self: flex-start;
-}
-
-.jd-textarea-wrapper textarea {
-  width: 100%;
-  box-sizing: border-box;
-  padding-left: 42px; /* room for plus icon */
-  min-height: 150px; /* make JD textarea noticeably taller */
-}
-
-.jd-input-icon {
-  position: absolute;
-  left: 10px;
-  top: 10px;
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  line-height: 1;
-  color: #e5e7eb;
-  background: transparent;
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
-
-.jd-input-icon:hover {
-  background: rgba(79, 70, 229, 0.9);
-  border-color: rgba(129, 140, 248, 0.9);
-}
-
-.jd-corner-model-select {
-  position: absolute;
-  right: 10px;
-  bottom: 8px;
-  border: none !important; /* override .field select border */
-  border-radius: 999px;
-  padding: 2px 14px 2px 6px;
-  font-size: 0.8rem;
-  background: linear-gradient(135deg, #374151, #020617);
-  color: #e5e7eb;
-  cursor: pointer;
-  outline: none !important;
-  width: auto !important; /* override .field select width: 100% */
-  max-width: 180px;
-  display: inline-block;
-  box-shadow: none;
-  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.jd-corner-model-select:hover,
-.jd-corner-model-select:focus,
-.jd-corner-model-select:focus-visible {
-  background: linear-gradient(135deg, #4b5563, #020617);
-  color: #ffffff;
-  box-shadow: none;
-}
-
-@media (min-width: 768px) {
-  /* Keep generic sections slightly structured, but do not override specialized grids
-     like .email-grid, .setup-grid, or .suggestions-grid. */
-  .form-section:not(.email-grid):not(.setup-grid):not(.suggestions-grid) {
-    display: grid;
-    grid-template-columns: minmax(0, 1.1fr);
-  }
-}
-
-@media (max-width: 480px) {
-  .App {
-    padding: 20px 10px;
-  }
-
-  .form-section,
-  .suggestions-section {
-    padding: 16px 14px;
-  }
-
-  .App h1 {
-    font-size: 1.5rem;
-  }
 }
 
 .tabs {
@@ -651,4 +260,28 @@
   background: linear-gradient(135deg, #8b5cf6, #ec4899);
   color: #f9fafb;
   transform: translateY(-1px);
+}
+
+@media (min-width: 768px) {
+  /* Keep generic sections slightly structured, but do not override specialized grids
+     like .email-grid, .setup-grid, or .suggestions-grid. */
+  .form-section:not(.email-grid):not(.setup-grid):not(.suggestions-grid) {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .App {
+    padding: 20px 10px;
+  }
+
+  .form-section,
+  .suggestions-section {
+    padding: 16px 14px;
+  }
+
+  .App h1 {
+    font-size: 1.5rem;
+  }
 }

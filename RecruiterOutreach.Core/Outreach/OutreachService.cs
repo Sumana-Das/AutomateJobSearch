@@ -40,16 +40,16 @@ public sealed class OutreachService
         string? resumeAttachmentPath = null,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Starting outreach run for Company={Company}, Role={Role}", company, role);
+        _logger.LogInformation(Constants.Logs.Outreach.StartingRun, company, role);
 
         if (!string.IsNullOrWhiteSpace(jobDescription))
         {
-            _logger.LogInformation("JD provided. Running in DRAFT mode (no emails will be sent).");
+            _logger.LogInformation(Constants.Logs.Outreach.JDDraftMode);
 
             var gemini = _services.GetService<IGeminiPersonalizationService>();
             if (gemini is null)
             {
-                throw new InvalidOperationException("Gemini service is not configured.");
+                throw new InvalidOperationException(Constants.Gemini.Errors.MissingConfig);
             }
 
             var personalization = await gemini.ResumeSuggestionAsync(
@@ -63,30 +63,30 @@ public sealed class OutreachService
                 ? Path.GetDirectoryName(_settings.Resume.DefaultAttachmentPath) ?? Directory.GetCurrentDirectory()
                 : Path.GetDirectoryName(Environment.ProcessPath!) ?? Directory.GetCurrentDirectory();
 
-            var outputFolder = Path.Combine(baseFolder, "Suggestions");
+            var outputFolder = Path.Combine(baseFolder, Constants.Files.SuggestionsDir);
             Directory.CreateDirectory(outputFolder);
 
             var safeCompany = MakeSafeFileNamePart(company);
             var safeRole = MakeSafeFileNamePart(role);
-            var fileName = $"ResumeSuggestions_{safeCompany}_{safeRole}_{DateTime.Now:yyyyMMddHHmmss}.txt";
+            var fileName = $"{Constants.Files.SuggestionsFilePrefix}{safeCompany}_{safeRole}_{DateTime.Now}:{Constants.Files.SuggestionsFileTimestampFormat}{Constants.Files.SuggestionsFileExtension}";
             var fullPath = Path.Combine(outputFolder, fileName);
 
             using (var writer = new StreamWriter(fullPath))
             {
-                await writer.WriteLineAsync($"Company: {company}");
-                await writer.WriteLineAsync($"Role: {role}");
+                await writer.WriteLineAsync($"{Constants.Labels.Company}{company}");
+                await writer.WriteLineAsync($"{Constants.Labels.Role}{role}");
                 await writer.WriteLineAsync();
 
-                await writer.WriteLineAsync("Our scoring (heuristic overlap using Gemini JD/resume keywords):");
-                await writer.WriteLineAsync($"Match score: {personalization.OurMatchScore}");
+                await writer.WriteLineAsync(Constants.Labels.OurScoringHeader);
+                await writer.WriteLineAsync($"{Constants.Labels.MatchScore}{personalization.OurMatchScore}");
                 await writer.WriteLineAsync();
 
                 if (personalization.OurKeywordsToAdd.Count > 0)
                 {
-                    await writer.WriteLineAsync("Keywords to consider adding:");
+                    await writer.WriteLineAsync(Constants.Labels.KeywordsToAdd);
                     foreach (var kw in personalization.OurKeywordsToAdd)
                     {
-                        await writer.WriteLineAsync("- " + kw);
+                        await writer.WriteLineAsync(Constants.Labels.BulletPrefix + kw);
                     }
 
                     await writer.WriteLineAsync();
@@ -94,25 +94,25 @@ public sealed class OutreachService
 
                 if (personalization.OurMissingKeywords.Count > 0)
                 {
-                    await writer.WriteLineAsync("Keywords currently missing from your resume:");
+                    await writer.WriteLineAsync(Constants.Labels.MissingKeywords);
                     foreach (var kw in personalization.OurMissingKeywords)
                     {
-                        await writer.WriteLineAsync("- " + kw);
+                        await writer.WriteLineAsync(Constants.Labels.BulletPrefix + kw);
                     }
 
                     await writer.WriteLineAsync();
                 }
 
-                await writer.WriteLineAsync("Gemini scoring (direct from model):");
-                await writer.WriteLineAsync($"Match score: {personalization.GeminiMatchScore}");
+                await writer.WriteLineAsync(Constants.Labels.GeminiScoringHeader);
+                await writer.WriteLineAsync($"{Constants.Labels.MatchScore}{personalization.GeminiMatchScore}");
                 await writer.WriteLineAsync();
 
                 if (personalization.GeminiKeywordsToAdd.Count > 0)
                 {
-                    await writer.WriteLineAsync("Keywords to consider adding (Gemini):");
+                    await writer.WriteLineAsync(Constants.Labels.KeywordsToAddGemini);
                     foreach (var kw in personalization.GeminiKeywordsToAdd)
                     {
-                        await writer.WriteLineAsync("- " + kw);
+                        await writer.WriteLineAsync(Constants.Labels.BulletPrefix + kw);
                     }
 
                     await writer.WriteLineAsync();
@@ -120,21 +120,21 @@ public sealed class OutreachService
 
                 if (personalization.GeminiMissingKeywords.Count > 0)
                 {
-                    await writer.WriteLineAsync("Keywords currently missing (Gemini view):");
+                    await writer.WriteLineAsync(Constants.Labels.MissingKeywordsGemini);
                     foreach (var kw in personalization.GeminiMissingKeywords)
                     {
-                        await writer.WriteLineAsync("- " + kw);
+                        await writer.WriteLineAsync(Constants.Labels.BulletPrefix + kw);
                     }
 
                     await writer.WriteLineAsync();
                 }
 
-                await writer.WriteLineAsync("Detailed suggestions:");
+                await writer.WriteLineAsync(Constants.Labels.DetailedSuggestions);
                 await writer.WriteLineAsync();
                 await writer.WriteAsync(personalization.UpdatedResumeText);
             }
 
-            _logger.LogInformation("Resume suggestions file created at {Path}. Review and manually update your DOCX/PDF.", fullPath);
+            _logger.LogInformation(Constants.Logs.Outreach.SuggestionsCreatedAt, fullPath);
 
             return;
         }
@@ -149,7 +149,7 @@ public sealed class OutreachService
 
         if (recipients.Length == 0)
         {
-            _logger.LogWarning("No recruiter email addresses provided. Aborting outreach run.");
+            _logger.LogWarning(Constants.Logs.Outreach.NoRecruiters);
             return;
         }
 
@@ -158,7 +158,7 @@ public sealed class OutreachService
             : _settings.Resume.DefaultAttachmentPath;
         if (!string.IsNullOrWhiteSpace(resumePath) && !File.Exists(resumePath))
         {
-            _logger.LogWarning("Configured default resume attachment does not exist at {Path}", resumePath);
+            _logger.LogWarning(Constants.Logs.Outreach.DefaultResumeMissing, resumePath);
         }
 
         // Resolve the template variant to use (e.g., HR vs Referral for the given role)
@@ -179,16 +179,16 @@ public sealed class OutreachService
             var recruiterName = GetRecruiterNameFromEmail(recruiterEmail, _settings);
 
             var subject = subjectTemplate
-                .Replace("{Company}", company, StringComparison.OrdinalIgnoreCase)
-                .Replace("{Role}", role, StringComparison.OrdinalIgnoreCase)
-                .Replace("{RecruiterName}", recruiterName, StringComparison.OrdinalIgnoreCase);
+                .Replace(Constants.Placeholders.Company, company, StringComparison.OrdinalIgnoreCase)
+                .Replace(Constants.Placeholders.Role, role, StringComparison.OrdinalIgnoreCase)
+                .Replace(Constants.Placeholders.RecruiterName, recruiterName, StringComparison.OrdinalIgnoreCase);
 
             var body = bodyTemplate
-                .Replace("{Company}", company, StringComparison.OrdinalIgnoreCase)
-                .Replace("{Role}", role, StringComparison.OrdinalIgnoreCase)
-                .Replace("{RecruiterName}", recruiterName, StringComparison.OrdinalIgnoreCase);
+                .Replace(Constants.Placeholders.Company, company, StringComparison.OrdinalIgnoreCase)
+                .Replace(Constants.Placeholders.Role, role, StringComparison.OrdinalIgnoreCase)
+                .Replace(Constants.Placeholders.RecruiterName, recruiterName, StringComparison.OrdinalIgnoreCase);
 
-            _logger.LogInformation("Sending outreach email to {Recruiter}", recruiterEmail);
+            _logger.LogInformation(Constants.Logs.Outreach.SendingTo, recruiterEmail);
 
             try
             {
@@ -201,18 +201,18 @@ public sealed class OutreachService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send email to {Recruiter}", recruiterEmail);
+                _logger.LogError(ex, Constants.Logs.Outreach.SendFailed, recruiterEmail);
             }
         }
 
-        _logger.LogInformation("Outreach run completed.");
+        _logger.LogInformation(Constants.Logs.Outreach.Completed);
     }
 
     private static string GetRecruiterNameFromEmail(string email, OutreachSettings settings)
     {
         if (string.IsNullOrWhiteSpace(email))
         {
-            return "Recruiter";
+            return Constants.Defaults.RecruiterName;
         }
 
         var atIndex = email.IndexOf('@');
@@ -272,12 +272,12 @@ public sealed class OutreachService
     private RoleTemplateVariant ResolveTemplate(string? roleKey, string? templateKind)
     {
         // Normalise kind (default to HR if not specified)
-        var kind = string.IsNullOrWhiteSpace(templateKind) ? "Hr" : templateKind;
+        var kind = string.IsNullOrWhiteSpace(templateKind) ? Constants.TemplateKinds.Hr : templateKind;
 
         // Helper local function to extract variant from a role template
         static RoleTemplateVariant? GetVariant(RoleEmailTemplateSettings roleTemplate, string kindValue)
         {
-            return kindValue.Equals("Referral", StringComparison.OrdinalIgnoreCase)
+            return kindValue.Equals(Constants.TemplateKinds.Referral, StringComparison.OrdinalIgnoreCase)
                 ? roleTemplate.Templates.Referral
                 : roleTemplate.Templates.Hr;
         }
@@ -307,7 +307,7 @@ public sealed class OutreachService
         // 3) Fallback: first available role + HR (or Referral) variant
         foreach (var t in _settings.RoleEmailTemplates)
         {
-            var variant = GetVariant(t, kind) ?? GetVariant(t, "Hr") ?? GetVariant(t, "Referral");
+            var variant = GetVariant(t, kind) ?? GetVariant(t, Constants.TemplateKinds.Hr) ?? GetVariant(t, Constants.TemplateKinds.Referral);
             if (variant is not null)
             {
                 return variant;

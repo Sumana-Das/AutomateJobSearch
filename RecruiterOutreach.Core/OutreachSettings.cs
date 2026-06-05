@@ -60,6 +60,6 @@ public sealed class GeminiSettings
 
 public sealed class ScoringSettings
 {
-    public double HighThreshold { get; set; } = 0.7;
-    public double MediumThreshold { get; set; } = 0.4;
+    public double HighThreshold { get; set; } = Constants.Scoring.DefaultHighThreshold;
+    public double MediumThreshold { get; set; } = Constants.Scoring.DefaultMediumThreshold;
 }

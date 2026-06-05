@@ -1,5 +1,6 @@
 import { startGoogleLogin } from '../services/authService';
 import React, { useState } from 'react';
+import { Buttons, Modal } from '../constants';
 
 type SignInModalProps = {
   onClose: () => void;
@@ -12,8 +13,8 @@ export const SignInModal: React.FC<SignInModalProps> = ({ onClose, onStubComplet
     <div role="dialog" aria-modal="true" className="modal-overlay" onClick={onClose}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2 className="modal-title">Sign in to TailorMailer</h2>
-          <button onClick={onClose} aria-label="Close" className="icon-button">
+          <h2 className="modal-title">{Modal.SignInTitle}</h2>
+          <button onClick={onClose} aria-label={Modal.CloseAria} className="icon-button">
             ×
           </button>
         </div>
@@ -22,19 +23,19 @@ export const SignInModal: React.FC<SignInModalProps> = ({ onClose, onStubComplet
           <button type="button" className="btn-google" onClick={() => {
               startGoogleLogin();
             }}>
-            Continue with Google
+            {Buttons.ContinueWithGoogle}
           </button>
 
-          <div className="text-muted-small">or continue with email</div>
+          <div className="text-muted-small">{Modal.OrContinueWithEmail}</div>
 
           <div className="form-vertical">
             <label htmlFor="stub-email" className="label-sm">
-              Email
+              {Modal.EmailLabel}
             </label>
             <input
               id="stub-email"
               type="email"
-              placeholder="you@example.com"
+              placeholder={Modal.EmailPlaceholder}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="input-text"
@@ -43,10 +44,10 @@ export const SignInModal: React.FC<SignInModalProps> = ({ onClose, onStubComplet
 
           <div className="actions mt-8">
             <button type="button" onClick={() => onStubComplete(email)} disabled={!email} className="btn-primary">
-              Continue
+              {Buttons.Continue}
             </button>
             <button type="button" onClick={onClose} className="btn-secondary">
-              Cancel
+              {Buttons.Cancel}
             </button>
           </div>
         </div>

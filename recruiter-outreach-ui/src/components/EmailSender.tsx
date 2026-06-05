@@ -1,3 +1,4 @@
+import { Buttons, Labels, Placeholders, TemplateKinds, Messages, Values } from '../constants';
 import React, { useEffect, useMemo, useState } from 'react';
 import { fetchTemplates, sendEmails, TemplateDto } from '../services/emailSenderApi';
 
@@ -16,6 +17,7 @@ export const EmailSender: React.FC = () => {
   const [emailBody, setEmailBody] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [persistResume, setPersistResume] = useState(false);
 
@@ -25,7 +27,7 @@ export const EmailSender: React.FC = () => {
         const data = await fetchTemplates();
         setTemplates(data);
       } catch (e: any) {
-        setError(e.message ?? 'Failed to load templates');
+        setError(e.message ?? Messages.FailedToLoadTemplates);
       }
     };
 
@@ -43,12 +45,12 @@ export const EmailSender: React.FC = () => {
     }
 
     const variant =
-      templateKind === 'Referral' ? selected.templates.referral ?? selected.templates.hr : selected.templates.hr;
+      templateKind === TemplateKinds.Referral ? selected.templates.referral ?? selected.templates.hr : selected.templates.hr;
 
     if (variant) {
       const roleName = selected.displayName || selected.key;
-      const resolvedSubject = (variant.subjectTemplate ?? '').replaceAll('{Role}', roleName);
-      const resolvedBody = (variant.bodyTemplate ?? '').replaceAll('{Role}', roleName);
+      const resolvedSubject = (variant.subjectTemplate ?? '').replaceAll(Placeholders.RoleToken, roleName);
+      const resolvedBody = (variant.bodyTemplate ?? '').replaceAll(Placeholders.RoleToken, roleName);
       setEmailSubject(resolvedSubject);
       setEmailBody(resolvedBody);
     }
@@ -67,6 +69,7 @@ export const EmailSender: React.FC = () => {
 
   const handleSend = async () => {
     setError(null);
+    setSuccess(null);
     setSending(true);
 
     try {
@@ -79,8 +82,13 @@ export const EmailSender: React.FC = () => {
         resumeFile,
         persistResume,
       });
+      setSuccess(Messages.EmailsSentSuccess);
     } catch (e: any) {
-      setError(e.message ?? 'Failed to send emails');
+      if (e && (e.code === Values.SessionExpiredCode || e.status === 401)) {
+        setError(Messages.SessionExpired);
+      } else {
+        setError(e?.message ?? Messages.FailedToSendEmails);
+      }
     } finally {
       setSending(false);
     }
@@ -89,8 +97,8 @@ export const EmailSender: React.FC = () => {
   return (
     <section className="form-section email-grid">
       <div className="field">
-        <label htmlFor="roleKey">Role *</label>
-        <p className="section-help">Choose the role you want to apply for</p>
+        <label htmlFor="roleKey">{Labels.Role}</label>
+        <p className="section-help">{Labels.RoleHelp}</p>
         <select
           id="roleKey"
           value={roleKey}
@@ -107,7 +115,7 @@ export const EmailSender: React.FC = () => {
           }}
           disabled={templates.length === 0}
         >
-          <option value="">Select role</option>
+          <option value="">{Labels.SelectRole}</option>
           {templates.map((t) => (
             <option key={t.key} value={t.key}>
               {t.displayName || t.key}
@@ -117,18 +125,18 @@ export const EmailSender: React.FC = () => {
       </div>
 
       <div className="field">
-        <label htmlFor="templateKind">Template *</label>
-        <p className="section-help">Choose the email template variant to use</p>
+        <label htmlFor="templateKind">{Labels.Template}</label>
+        <p className="section-help">{Labels.TemplateHelp}</p>
         <select
           id="templateKind"
           value={templateKind}
           onChange={(e) => setTemplateKind(e.target.value)}
           disabled={templates.length === 0 || !roleKey}
         >
-          <option value="">Select template</option>
+          <option value="">{Labels.SelectTemplate}</option>
           {(templates.find((t) => t.key === roleKey)?.availableTemplates ?? []).map((k) => (
             <option key={k} value={k}>
-              {k === 'Hr' ? 'HR – Direct' : k === 'Referral' ? 'Referral' : k}
+              {k === TemplateKinds.Hr ? TemplateKinds.Labels.Hr : k === TemplateKinds.Referral ? TemplateKinds.Labels.Referral : k}
             </option>
           ))}
         </select>
@@ -136,17 +144,18 @@ export const EmailSender: React.FC = () => {
 
       {/* Left column: recruiter contact + resume */}
       <div className="field recruiters-field">
-        <label htmlFor="recruiters">Recruiter contact *</label>
-        <p className="section-help">Enter email IDs (allowed - commas, semicolons, spaces, new lines)</p>
+        <label htmlFor="recruiters">{Labels.RecruiterContact}</label>
+        <p className="section-help">{Labels.RecruiterHelp}</p>
         <textarea
           id="recruiters"
           rows={4}
           value={recruiterEmails}
           onChange={(e) => setRecruiterEmails(e.target.value)}
-          placeholder="e.g. recruiter1@example.com, recruiter2@example.com"
+          placeholder={Placeholders.Recruiters}
         />
 
-        <label htmlFor="resumeFile">Resume</label>
+        <label htmlFor="resumeFile">{Labels.Resume}</label>
+        <p className="section-help">{Labels.ResumeHelp}</p>
         <input
           id="resumeFile"
           type="file"
@@ -162,39 +171,40 @@ export const EmailSender: React.FC = () => {
             checked={persistResume}
             onChange={(e) => setPersistResume(e.target.checked)}
           />
-          <span className="section-help">Save this resume for future emails</span>
+          <span className="section-help">{Labels.SaveResume}</span>
         </label>
       </div>
 
       {/* Right column: subject + body */}
       <div className="field body-field">
-        <label htmlFor="emailSubject">Email subject</label>
-        <p className="section-help">You can customize the subject before sending</p>
+        <label htmlFor="emailSubject">{Labels.EmailSubject}</label>
+        <p className="section-help">{Labels.EmailSubjectHelp}</p>
         <input
           id="emailSubject"
           type="text"
           value={emailSubject}
           onChange={(e) => setEmailSubject(e.target.value)}
-          placeholder="Subject line for your email"
+          placeholder={Placeholders.EmailSubject}
         />
 
-        <label htmlFor="emailBody">Email body</label>
-        <p className="section-help">You can customize the email body before sending.</p>
+        <label htmlFor="emailBody">{Labels.EmailBody}</label>
+        <p className="section-help">{Labels.EmailBodyHelp}</p>
         <textarea
           id="emailBody"
           rows={4}
           value={emailBody}
           onChange={(e) => setEmailBody(e.target.value)}
-          placeholder="Write or paste the email you want to send to recruiters"
+          placeholder={Placeholders.EmailBody}
         />
       </div>
 
       <div className="actions full-width">
         <button type="button" onClick={handleSend} disabled={sending || !canSubmit}>
-          {sending ? 'Sending…' : 'Send emails now'}
+          {sending ? Buttons.Sending : Buttons.SendNow}
         </button>
       </div>
 
+      {success && <div className="success">{success}</div>}
       {error && <div className="error">{error}</div>}
     </section>
   );

@@ -4,9 +4,9 @@ namespace RecruiterOutreach.Core.Config;
 
 public sealed class GeminiModelConfig
 {
-    public string Id { get; set; } = string.Empty;          // e.g. "gemini-3.5-flash"
-    public string DisplayName { get; set; } = string.Empty; // For UI dropdown
-    public string Model { get; set; } = string.Empty;       // Actual Gemini model name
+    public string Id { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public string Model { get; set; } = string.Empty;
     public int MaxRequestsPerMinute { get; set; }
     public int MaxRequestsPerDay { get; set; }
 }
